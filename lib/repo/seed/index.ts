@@ -85,6 +85,27 @@ const systems: System[] = [
       { catalog_id: 'cage_hoops', name: 'cage_hoops', archetype: 'threshold', inputs: [{ name: 'threshold', label: 'Threshold', type: { kind: 'distance' }, required: true, default: 3000 }, { name: 'hoop_spacing', label: 'Hoop spacing', type: { kind: 'distance' }, required: true, default: 280 }], scope: { kind: 'per_span', span_name: 'cage_zone' } },
       { catalog_id: 'mounting_brackets', name: 'mounting_brackets', archetype: 'spacing', inputs: [{ name: 'spacing', label: 'Spacing', type: { kind: 'distance' }, required: true, default: 1600 }], scope: 'per_mount_surface' },
     ],
+    attachments: [
+      {
+        id: 'att-walkway', role_label: 'Top walkway', attached_system_id: 'sys-walkway',
+        model_binding: { kind: 'pinned', model_id: 'mdl-walkway-std' },
+        connection: {
+          from_point: { kind: 'head' },
+          to_point: { kind: 'start' },
+          constraints: [{ kind: 'height_match', from_field: 'chain.adjusted', to_field: 'deck_height' }],
+        },
+        // walkway post spacing is fixed by the host design (locked); the deck height
+        // is derived from the ladder climb and pushed into the attached system.
+        presets: [{ target: { kind: 'property_input', property: 'handrail_posts', input: 'spacing' }, value: 1500, locked: true }],
+        derived_bindings: [{ target: { kind: 'modifier', name: 'deck_height' }, source: { kind: 'height_match', from_field: 'chain.adjusted', to_field: 'deck_height' } }],
+        // at the joint the top cage hoop and the walkway's end post/leg are redundant.
+        suppressions: [
+          { member: 'this', property_name: 'cage_hoops', region: 'at_connection' },
+          { member: 'attached', property_name: 'handrail_posts', region: 'at_connection' },
+        ],
+        optional: true, default_included: true,
+      },
+    ],
     models: [
       {
         id: 'mdl-ladder-nf', name: 'NF E85-016 cage ladder', system_id: 'sys-ladder', status: 'published',
@@ -107,6 +128,36 @@ const systems: System[] = [
           { id: 'mm-stringer', material_id: 'mat-stringer', rule: { qty_kind: 'fixed', qty: 4, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
           { id: 'mm-restplatform', material_id: 'mat-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-cert', material_id: 'mat-cert', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
+        ],
+        // connection materials are MODEL-level rules keyed by attachment — a gate at
+        // the landing + transition bars cut from the SAME L-bar pool as everything else.
+        connection_materials: [
+          { attachment_id: 'att-walkway', material_id: 'mat-gate', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
+          { attachment_id: 'att-walkway', material_id: 'mat-lbar', rule: { qty_kind: 'cut', cut_length: 450, per: { kind: 'derived', name: 'free_ends_count' }, applies_when: { variants: [], criteria: {} } } },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'sys-walkway', name: 'Elevated walkway', primitive: { kind: 'length', segmentable: true },
+    modifiers: [
+      { name: 'start_offset', group: 'geometric', type: { kind: 'distance' }, enabled: true, default_value: 0 },
+      { name: 'deck_height', group: 'environmental', type: { kind: 'distance' }, enabled: true, default_value: 0 },
+    ],
+    variants: { attribute_columns: [], rows: [{ kind: 'local', name: 'Standard', attributes: {} }] },
+    criteria: [{ library_id: 'compliance_code', default_value: 'EN_ISO_14122-3' }],
+    properties: [
+      { catalog_id: 'walk_posts', name: 'handrail_posts', archetype: 'spacing', inputs: [{ name: 'spacing', label: 'Post spacing', type: { kind: 'distance' }, required: true, default: 1500 }], scope: 'per_segment' },
+    ],
+    models: [
+      {
+        id: 'mdl-walkway-std', name: 'Standard grated walkway', system_id: 'sys-walkway', status: 'published',
+        modifier_defaults: {}, sub_assembly_uses: [], sku_lookups: [], criteria_driven_defaults: [],
+        materials: [
+          { id: 'mm-walk-grating', material_id: 'mat-grating', rule: { qty_kind: 'per_length', qty: 1, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-walk-rail', material_id: 'mat-walk-rail', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-walk-post', material_id: 'mat-walk-post', rule: { qty_kind: 'per', per: { kind: 'property', name: 'handrail_posts' }, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-walk-leg', material_id: 'mat-lbar', rule: { qty_kind: 'cut', cut_length: 600, per: { kind: 'property', name: 'handrail_posts' }, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],
