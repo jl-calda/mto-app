@@ -174,7 +174,7 @@ type NavItem = { id: string; label: string; href: string; icon: ReactNode; tag?:
 export type RecentItem = { label: string; href: string; color: string; tag?: string };
 
 // ----- SIDEBAR (global nav) -----
-export function Sidebar({ active = 'projects', counts, recent }: { active?: string; counts?: Record<string, number>; recent?: RecentItem[] }) {
+export function Sidebar({ active = 'projects', counts, recent, source = 'memory' }: { active?: string; counts?: Record<string, number>; recent?: RecentItem[]; source?: 'supabase' | 'memory' }) {
   const items: NavItem[] = [
     { id: 'projects', label: 'Projects', href: '/', icon: <Icon.Folder /> },
     { id: 'systems', label: 'Systems', href: '/systems', icon: <Icon.Layers /> },
@@ -215,7 +215,7 @@ export function Sidebar({ active = 'projects', counts, recent }: { active?: stri
       <div style={{ flex: 1 }} />
       <div style={sbStyles.foot}>
         <div className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
-          mto · in-memory seed
+          mto · {source === 'supabase' ? 'supabase · live' : 'in-memory seed'}
         </div>
       </div>
     </aside>

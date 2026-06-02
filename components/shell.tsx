@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { TopBar, Sidebar, type Crumb, type RecentItem } from './chrome';
-import { getRepo } from '@/lib/repo';
+import { getRepo, getRepoSource } from '@/lib/repo';
 
 // The data-aware app frame: a server component that reads real nav counts + recent
 // take-offs from the repo and composes the presentational TopBar / Sidebar.
@@ -48,7 +48,7 @@ export async function Shell({
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar crumbs={crumbs} right={topRight} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} />}
+        {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
         <main style={{ flex: 1, minWidth: 0, overflow: scroll ? 'auto' : 'hidden', background: 'var(--bg)' }}>
           {children}
         </main>
