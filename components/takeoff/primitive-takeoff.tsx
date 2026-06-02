@@ -5,7 +5,7 @@ import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
-import type { AttachmentInstance, ChainRole, Material, Model, SubAssembly, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
+import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -21,6 +21,15 @@ function snapshotFor(r: SystemVariantRef): VariantSnapshot {
   return r.kind === 'local'
     ? { source_ref: r, attributes: r.attributes }
     : { source_ref: r, snapshot_version: r.pinned_version, attributes: {} };
+}
+function presetLabel(t: PresetTarget): string {
+  switch (t.kind) {
+    case 'variant': return 'variant';
+    case 'criterion': return `criterion:${t.name}`;
+    case 'modifier': return `modifier:${t.name}`;
+    case 'property_input': return `${t.property}.${t.input}`;
+    case 'primitive_input_field': return `primitive.${t.field}`;
+  }
 }
 
 export function PrimitiveTakeoff({
@@ -89,6 +98,15 @@ export function PrimitiveTakeoff({
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;
+
+  // provenance labels for MTO lines (which sub-assembly / attachment produced them)
+  const attLabel = useMemo(() => new Map((system.attachments ?? []).map((a) => [a.id, a.role_label])), [system.attachments]);
+  const saLabel = useMemo(() => new Map(subAssemblies.map((s) => [s.id, s.name])), [subAssemblies]);
+  const provenance = (l: { source_attachment?: string; source_sub_assembly?: string }) => {
+    if (l.source_attachment) return { text: `↳ ${attLabel.get(l.source_attachment) ?? 'attachment'}`, color: 'var(--annotation)', bg: 'var(--annotation-soft)' };
+    if (l.source_sub_assembly) return { text: `⊂ ${saLabel.get(l.source_sub_assembly) ?? 'sub-assembly'}`, color: 'var(--accent)', bg: 'var(--accent-soft)' };
+    return null;
+  };
 
   function downloadCsv() {
     const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
@@ -223,6 +241,117 @@ export function PrimitiveTakeoff({
               </div>
             </Section>
           )}
+
+          {(system.attachments ?? []).length > 0 && (
+            <Section index="05" title="Attachments">
+              <div className="flex flex-col gap-2.5">
+                {(system.attachments ?? []).map((att) => {
+                  const inst = attState[att.id];
+                  const on = inst?.included ?? att.default_included;
+                  const attachedSys = sysById.get(att.attached_system_id);
+                  const summary = result.attachments.find((a) => a.id === att.id);
+                  const lockedInputs = new Set(
+                    att.presets
+                      .filter((p) => p.locked && p.target.kind === 'property_input')
+                      .map((p) => (p.target.kind === 'property_input' ? `${p.target.property}.${p.target.input}` : '')),
+                  );
+                  const total = (inst?.primitive_input as { total?: number } | undefined)?.total ?? 0;
+                  return (
+                    <div key={att.id} className="rounded border" style={{ borderColor: on ? 'var(--accent-line)' : 'var(--line-2)', background: on ? 'var(--panel)' : 'var(--panel-2)' }}>
+                      <button
+                        onClick={() => setAttState((s) => ({ ...s, [att.id]: { ...s[att.id], attachment_id: att.id, included: !on } }))}
+                        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                      >
+                        <span
+                          className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors"
+                          style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}
+                        >
+                          <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[13px] font-medium">{att.role_label}</div>
+                          <div className="mono text-[10px] text-ink-3">
+                            {attachedSys?.name ?? att.attached_system_id} · {att.connection.from_point.kind} → {att.connection.to_point.kind}
+                          </div>
+                        </div>
+                        {att.optional && <span className="tag">optional</span>}
+                        {on && summary && <span className="tag" style={{ color: 'var(--annotation)', background: 'var(--annotation-soft)' }}>+{summary.line_count} lines</span>}
+                      </button>
+
+                      {on && (
+                        <div className="border-t border-line p-3">
+                          {/* open inputs */}
+                          {attachedSys && (
+                            <div className="mb-2.5">
+                              <div className="uc mb-1.5">open inputs</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <label className="flex flex-col gap-1">
+                                  <span className="mono text-[10px] text-ink-3">run length · mm</span>
+                                  <input
+                                    className="input w-full"
+                                    value={total}
+                                    onChange={(e) =>
+                                      setAttState((s) => ({ ...s, [att.id]: { ...s[att.id], attachment_id: att.id, included: true, primitive_input: { mode: 'single', total: Math.max(0, Number(e.target.value) || 0) } } }))
+                                    }
+                                  />
+                                </label>
+                                {attachedSys.properties.flatMap((p) =>
+                                  p.inputs
+                                    .filter((i) => typeof i.default === 'number' && !lockedInputs.has(`${p.name}.${i.name}`))
+                                    .map((i) => (
+                                      <label key={`${p.name}.${i.name}`} className="flex flex-col gap-1">
+                                        <span className="mono text-[10px] text-ink-3">{p.name}.{i.name}</span>
+                                        <input
+                                          className="input w-full"
+                                          value={(inst?.property_values?.[p.name] as Record<string, number> | undefined)?.[i.name] ?? (i.default as number)}
+                                          onChange={(e) =>
+                                            setAttState((s) => {
+                                              const cur = s[att.id] ?? { attachment_id: att.id, included: true };
+                                              const pv = { ...(cur.property_values ?? {}) };
+                                              pv[p.name] = { ...(pv[p.name] as Record<string, unknown> ?? {}), [i.name]: Math.max(0, Number(e.target.value) || 0) };
+                                              return { ...s, [att.id]: { ...cur, attachment_id: att.id, included: true, property_values: pv } };
+                                            })
+                                          }
+                                        />
+                                      </label>
+                                    )),
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* derived (from connection constraints) + locked presets */}
+                          {(summary && Object.keys(summary.derived).length > 0) || att.presets.length > 0 ? (
+                            <div className="mb-2">
+                              <div className="uc mb-1.5">derived &amp; locked</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {summary &&
+                                  Object.entries(summary.derived).map(([k, v]) => (
+                                    <span key={k} className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>
+                                      {k.replace(/^(mod|crit|prop|prim):/, '')} ← {v.toLocaleString()} · derived
+                                    </span>
+                                  ))}
+                                {att.presets.map((p, i) => (
+                                  <span key={i} className="tag" title={p.locked ? 'locked preset' : 'editable preset'}>
+                                    {p.locked ? '🔒 ' : ''}
+                                    {presetLabel(p.target)} = {String(p.value)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="rounded p-2 text-[11px] text-ink-2" style={{ background: 'var(--bg-2)' }}>
+                            Resolved recursively through the same engine; {att.suppressions.length} suppression(s) applied; cuts merged into the shared pool.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
         </div>
 
         <div className="min-w-0">
@@ -241,7 +370,15 @@ export function PrimitiveTakeoff({
               <div key={i} className="flex items-center gap-2 border-b border-line px-3.5 py-2 last:border-b-0">
                 <Visual visual={l.material_visual ?? { kind: 'icon', name: iconName }} name={l.description} size={22} rounded={3} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[12px]">{l.description}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-[12px]">{l.description}</span>
+                    {(() => {
+                      const p = provenance(l);
+                      return p ? (
+                        <span className="shrink-0 rounded px-1 text-[9px] font-medium" style={{ color: p.color, background: p.bg }}>{p.text}</span>
+                      ) : null;
+                    })()}
+                  </div>
                   <div className="mono truncate text-[10px] text-ink-3">{l.sku}</div>
                   {l.cutting_plan && (
                     <div className="mono text-[9px] text-annotation">
