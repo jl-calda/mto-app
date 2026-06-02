@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Shell, PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
+import { AttachmentsEditor } from '@/components/system-wizard/AttachmentsEditor';
 import { getRepo } from '@/lib/repo';
 import type { PrimitiveKind } from '@/lib/types';
 
@@ -10,9 +11,17 @@ const BADGEABLE: PrimitiveKind[] = ['length', 'height', 'count'];
 
 export default async function SystemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const system = await getRepo().getSystem(id);
+  const repo = getRepo();
+  const system = await repo.getSystem(id);
   if (!system) notFound();
   const k = system.primitive.kind;
+
+  // attached-system display names for the attachments editor
+  const attachedNames: Record<string, string> = {};
+  if (system.attachments?.length) {
+    const all = await repo.listSystems();
+    for (const s of all) attachedNames[s.id] = s.name;
+  }
 
   return (
     <Shell navActive="systems" crumbs={[{ label: 'Systems', href: '/systems' }, { label: system.name }]}>
@@ -93,6 +102,12 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
             <div className="px-3.5 py-6 text-center text-[12px] text-ink-3">No models yet.</div>
           )}
         </section>
+
+        {system.attachments && system.attachments.length > 0 && (
+          <div className="mt-4">
+            <AttachmentsEditor attachments={system.attachments} attachedNames={attachedNames} />
+          </div>
+        )}
         <div className="h-6" />
       </div>
     </Shell>

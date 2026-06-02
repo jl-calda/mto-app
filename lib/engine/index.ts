@@ -1,25 +1,31 @@
 // The pure resolution engine — the ONLY import surface for the UI.
-// v1 implements single-primitive resolution (length / height / count): the
-// dimension chain, property archetypes, the quantity patterns, SKU = referenced
-// material, consolidation, and basic warnings. Segmentation (Brief 07), algorithms
-// + cutting (Brief 08) and sub-assemblies/attachments (Brief 09) layer in next.
+// Single-primitive resolution (length / height / count): the dimension chain,
+// property archetypes, the quantity patterns, SKU = referenced material,
+// consolidation, warnings; algorithms + cutting (Brief 08); and sub-assemblies +
+// attachments (Brief 09 — recursive resolution into ONE shared cut pool).
 //
 // Purity contract: no I/O, no Date.now, no randomness; deterministic.
 // resolveTakeoff and evaluateRuleAgainstSample share the same evaluation core.
 
 import type {
+  AlgoOutput,
+  AlgorithmRegistry,
+} from './algorithms/types';
+import type {
   CanonicalGeometry,
   ChainRole,
   CuttingPlan,
+  DimensionChain,
   Material,
   Model,
   MtoLine,
   Rule,
+  SubAssembly,
   System,
   VariantSnapshot,
   Warning,
 } from '@/lib/types';
-import type { AlgorithmRegistry, AlgoOutput } from './algorithms/types';
+import type { HostEvalContext, ResolveDeps, Suppress, TakeoffInput, TraceNode } from './internal';
 import type { XRef } from './context';
 import { standardRegistry } from './algorithms/registry';
 import { buildChain, chainValue, chainLength } from './geometry/dimension-chain';
@@ -30,19 +36,19 @@ import {
   resolveQuantity,
   variantName,
 } from './evaluate';
+import { inlineSubAssemblyUses } from './emit';
+import {
+  buildAttachmentInput,
+  isAttachmentIncluded,
+  resolveConnectionMaterials,
+  suppressionsFor,
+} from './attachments';
 
 export type { EvalContext, ScopeInstance, XRef } from './context';
 export type { Algorithm, AlgorithmRegistry, AlgoInput, AlgoOutput } from './algorithms/types';
+export type { TakeoffInput, TraceNode } from './internal';
 export { createRegistry, defaultRegistry, standardRegistry } from './algorithms/registry';
 export { WarningSink } from './warnings';
-
-export type TakeoffInput = {
-  criteria_values: Record<string, unknown>;
-  modifier_values: Record<string, unknown>;
-  primitive_input: unknown;
-  property_values: Record<string, unknown>;
-  attachments?: unknown[];
-};
 
 export type ResolveTakeoffArgs = {
   system: System;
@@ -53,11 +59,23 @@ export type ResolveTakeoffArgs = {
   /** Material catalogue for SKU/description resolution. */
   materials?: Material[];
   projectDefaults?: Record<string, unknown>;
-  resolveAttachedSystem?: (id: string) => { system: System; model: Model };
+  /** Resolve an attachment's attached system (with all its models) by id. */
+  resolveAttachedSystem?: (id: string) => System | undefined;
+  /** Resolve a sub-assembly definition by id (for model + nested uses). */
+  resolveSubAssembly?: (id: string) => SubAssembly | undefined;
   algorithms?: AlgorithmRegistry;
 };
 
-export type TraceNode = { label: string; detail?: string; children?: TraceNode[] };
+/** Per-attachment outcome, surfaced for the take-off UI. */
+export type AttachmentSummary = {
+  id: string;
+  role_label: string;
+  attached_system_id: string;
+  attached_system_name: string;
+  included: boolean;
+  line_count: number;
+  derived: Record<string, number>;
+};
 
 export type TakeoffResult = {
   geometry: CanonicalGeometry;
@@ -67,6 +85,7 @@ export type TakeoffResult = {
   warnings: Warning[];
   trace: TraceNode[];
   counters: Record<string, number>;
+  attachments: AttachmentSummary[];
 };
 
 export type SampleInput = {
@@ -124,23 +143,46 @@ function geometryFrom(chain: CanonicalGeometry['dimension_chain']): CanonicalGeo
   };
 }
 
-// ── public API ──────────────────────────────────────────
-export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
-  const { system, model, variant, input } = args;
-  const materials = new Map((args.materials ?? []).map((m) => [m.id, m]));
-  const warnings: Warning[] = [];
+/** The property a rule's quantity is driven by (for suppression matching). */
+function targetProperty(rule: Rule): string | undefined {
+  return rule.per?.kind === 'property' ? rule.per.name : undefined;
+}
+
+// ── recursive model resolution (host + sub-assemblies + attachments) ───────
+type ModelResult = {
+  lines: MtoLine[];
+  chain: DimensionChain;
+  derived: Record<string, number>;
+  trace: TraceNode[];
+  attachmentSummaries: AttachmentSummary[];
+};
+
+function resolveModel(
+  system: System,
+  model: Model,
+  variant: VariantSnapshot,
+  input: TakeoffInput,
+  deps: ResolveDeps,
+  registry: AlgorithmRegistry,
+  warnings: Warning[],
+  /** suppressions inherited from a parent attachment — act on THIS model's materials. */
+  suppress: Suppress[],
+  /** tag every line this subtree emits as belonging to an attachment. */
+  attachmentTag: string | undefined,
+  depth: number,
+): ModelResult {
+  const lines: MtoLine[] = [];
   const trace: TraceNode[] = [];
-  const registry = args.algorithms ?? standardRegistry;
+  const attachmentSummaries: AttachmentSummary[] = [];
   const algorithmOutputs = new Map<string, AlgoOutput>();
-  const cutPool = new Map<string, number[]>();
 
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
   const propertyVals = evaluateProperties(system.properties, chain, input.property_values ?? {});
   const derived: Record<string, number> = { free_ends_count: 2 };
+
   // height auto-split into flights when the climb exceeds the compliance flight max
-  // (Brief 07, simple form — full segmentation geometry layers in later).
   if (system.primitive.kind === 'height') {
     const fmKey = Object.keys(modifierValues).find((k) => /flight.*max|max.*flight/i.test(k));
     const flightMax = fmKey ? num(modifierValues[fmKey]) : 0;
@@ -160,14 +202,35 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const primitiveCount = system.primitive.kind === 'count' ? rawValue : 0;
   const vname = variantName(variant);
 
-  const lines: MtoLine[] = [];
+  // raw per-property inputs (for sub-assembly property_ref bindings)
+  const propertyInputs: Record<string, Record<string, unknown>> = {};
+  for (const p of system.properties) {
+    propertyInputs[p.name] = (input.property_values?.[p.name] as Record<string, unknown> | undefined) ?? {};
+  }
+
+  // determine which attachments are active, then gather the suppressions that act
+  // on THIS model (member 'this') BEFORE resolving its own materials.
+  const instances = input.attachments ?? [];
+  const instById = new Map(instances.map((i) => [i.attachment_id, i]));
+  const activeAttachments = (system.attachments ?? []).filter((att) => isAttachmentIncluded(att, instById.get(att.id)));
+  const effectiveSuppress: Suppress[] = [
+    ...suppress,
+    ...activeAttachments.flatMap((att) => suppressionsFor(att, 'this')),
+  ];
+  const suppressFor = (rule: Rule): Suppress | undefined => {
+    const prop = targetProperty(rule);
+    return prop ? effectiveSuppress.find((s) => s.property_name === prop) : undefined;
+  };
+
+  // ── model materials ──
   for (const mm of model.materials) {
-    const mat = materials.get(mm.material_id);
+    const mat = deps.materials.get(mm.material_id);
     const applies = appliesWhen(mm.rule, vname, input.criteria_values ?? {});
     if (!applies.variant || !applies.criteria) {
       trace.push({ label: mm.material_id, detail: `skip · ${applies.skipReason}` });
       continue;
     }
+
     if (mm.rule.qty_kind === 'algorithm') {
       const cfg = mm.rule.algorithm_config;
       const algo = cfg ? registry.get(cfg.algorithm) : undefined;
@@ -193,8 +256,15 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
         unit: mat?.unit ?? 'ea',
         source_material_id: mm.material_id,
         source_rule_id: mm.id,
+        source_attachment: attachmentTag,
       });
       trace.push({ label: mm.material_id, detail: `${aqty} × ${mat?.sku ?? mm.material_id} · ${algo.name}` });
+      continue;
+    }
+
+    const sup = suppressFor(mm.rule);
+    if (sup?.region === 'whole') {
+      trace.push({ label: mm.material_id, detail: `suppressed · ${sup.property_name} (whole, ${attachmentTag ? 'attached' : 'host'})` });
       continue;
     }
 
@@ -204,13 +274,17 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
       continue;
     }
     if (q.kind === 'cut') {
-      const arr = cutPool.get(mm.material_id) ?? [];
-      for (let i = 0; i < q.occurrences; i++) arr.push(q.cut_length);
-      cutPool.set(mm.material_id, arr);
-      trace.push({ label: mm.material_id, detail: `cut · ${q.cut_length}mm × ${q.occurrences}` });
+      const occurrences = sup?.region === 'at_connection' ? Math.max(0, q.occurrences - 1) : q.occurrences;
+      if (q.cut_length > 0 && occurrences > 0) {
+        const arr = deps.cutPool.get(mm.material_id) ?? [];
+        for (let i = 0; i < occurrences; i++) arr.push(q.cut_length);
+        deps.cutPool.set(mm.material_id, arr);
+      }
+      trace.push({ label: mm.material_id, detail: `cut · ${q.cut_length}mm × ${occurrences}${sup ? ` (−1 @connection)` : ''}` });
       continue;
     }
-    if (q.value <= 0) {
+    const qty = sup?.region === 'at_connection' ? Math.max(0, q.value - 1) : q.value;
+    if (qty <= 0) {
       trace.push({ label: mm.material_id, detail: 'skip · qty 0' });
       continue;
     }
@@ -221,15 +295,119 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
       sku: mat?.sku ?? mm.material_id,
       material_visual: mat?.visual,
       description: mat?.name ?? mm.material_id,
-      qty: q.value,
+      qty,
       unit: mat?.unit ?? 'ea',
       source_material_id: mm.material_id,
       source_rule_id: mm.id,
+      source_attachment: attachmentTag,
     });
-    trace.push({ label: mm.material_id, detail: `${q.value} × ${mat?.sku ?? mm.material_id}` });
+    trace.push({ label: mm.material_id, detail: `${qty} × ${mat?.sku ?? mm.material_id}${sup ? ` (−1 @connection)` : ''}` });
   }
 
-  // aggregate cut demands per cuttable material → cut_from_stock → stock lines
+  const hostCtx: HostEvalContext = {
+    variantName: vname,
+    variantAttrs: variant.attributes,
+    criteria: input.criteria_values ?? {},
+    modifiers: modifierValues,
+    chain,
+    propertyValues: propertyVals,
+    propertyInputs,
+    derived,
+    primitiveCount,
+    algorithmOutputs,
+  };
+
+  // ── sub-assembly uses (inlined via the same evaluator, into the shared cut pool) ──
+  const subUses = model.sub_assembly_uses ?? [];
+  if (subUses.length) {
+    const r = inlineSubAssemblyUses(subUses, hostCtx, deps, attachmentTag);
+    lines.push(...r.lines);
+    warnings.push(...r.warnings);
+    if (r.trace.length) trace.push({ label: 'sub-assemblies', children: r.trace });
+  }
+
+  // ── attachments (recursive resolution into the same shared cut pool) ──
+  if (depth < 6) {
+    for (const att of activeAttachments) {
+      const attachedSystem = deps.resolveAttachedSystem?.(att.attached_system_id);
+      if (!attachedSystem) {
+        warnings.push({ level: 'warning', source: 'validation', message: `attached system ${att.attached_system_id} not found`, affected_fields: [att.id] });
+        trace.push({ label: att.role_label, detail: 'skip · attached system not found' });
+        continue;
+      }
+      const inst = instById.get(att.id);
+      const modelId =
+        att.model_binding.kind === 'pinned'
+          ? att.model_binding.model_id
+          : inst?.chosen_model_id ?? att.model_binding.default_model_id;
+      const attachedModel = attachedSystem.models.find((m) => m.id === modelId) ?? attachedSystem.models[0];
+      if (!attachedModel) {
+        warnings.push({ level: 'warning', source: 'validation', message: `attached model for ${att.attached_system_id} not found`, affected_fields: [att.id] });
+        continue;
+      }
+      const built = buildAttachmentInput(att, attachedSystem, hostCtx, inst);
+      const sub = resolveModel(
+        attachedSystem,
+        attachedModel,
+        built.variant,
+        built.input,
+        deps,
+        registry,
+        warnings,
+        suppressionsFor(att, 'attached'),
+        att.id,
+        depth + 1,
+      );
+      lines.push(...sub.lines);
+      attachmentSummaries.push(...sub.attachmentSummaries);
+
+      // connection materials are HOST model-level rules
+      const cm = resolveConnectionMaterials(model, att.id, hostCtx, deps);
+      lines.push(...cm.lines);
+      warnings.push(...cm.warnings);
+
+      trace.push({
+        label: built.trace.label,
+        detail: built.trace.detail,
+        children: [
+          { label: `${attachedSystem.name} · ${attachedModel.name}`, children: sub.trace },
+          ...(cm.trace.length ? [{ label: 'connection materials', children: cm.trace }] : []),
+        ],
+      });
+      attachmentSummaries.push({
+        id: att.id,
+        role_label: att.role_label,
+        attached_system_id: att.attached_system_id,
+        attached_system_name: attachedSystem.name,
+        included: true,
+        line_count: sub.lines.length + cm.lines.length,
+        derived: built.derived,
+      });
+    }
+  }
+
+  return { lines, chain, derived, trace, attachmentSummaries };
+}
+
+// ── public API ──────────────────────────────────────────
+export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
+  const { system, model, variant, input } = args;
+  const materials = new Map((args.materials ?? []).map((m) => [m.id, m]));
+  const warnings: Warning[] = [];
+  const registry = args.algorithms ?? standardRegistry;
+  const cutPool = new Map<string, number[]>();
+  const deps: ResolveDeps = {
+    materials,
+    cutPool,
+    resolveSubAssembly: args.resolveSubAssembly,
+    resolveAttachedSystem: args.resolveAttachedSystem,
+  };
+
+  const root = resolveModel(system, model, variant, input, deps, registry, warnings, [], undefined, 0);
+  const lines = root.lines;
+
+  // aggregate cut demands per cuttable material → cut_from_stock → stock lines.
+  // ONE shared pool: host + sub-assemblies + attachments + connection materials.
   const cuttingPlans: CuttingPlan[] = [];
   const cutAlgo = registry.get('cut_from_stock');
   for (const [matId, demands] of cutPool) {
@@ -279,19 +457,21 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const mto = [...bySku.values()];
 
   return {
-    geometry: geometryFrom(chain),
-    chain,
+    geometry: geometryFrom(root.chain),
+    chain: root.chain,
     mto,
     cuttingPlans,
     warnings,
-    trace,
+    trace: root.trace,
     counters: {
       lines: mto.length,
       items: mto.reduce((s, l) => s + l.qty, 0),
       ...(system.primitive.kind === 'height'
-        ? { flights: derived.flights ?? 1, rest_platforms: derived.rest_platforms ?? 0 }
+        ? { flights: root.derived.flights ?? 1, rest_platforms: root.derived.rest_platforms ?? 0 }
         : {}),
+      ...(root.attachmentSummaries.length ? { attachments: root.attachmentSummaries.length } : {}),
     },
+    attachments: root.attachmentSummaries,
   };
 }
 
