@@ -1,6 +1,10 @@
 # Brief 03 — Materials + Variants libraries (CRUD)
 
-**Milestone:** v1 (items 3, 4) · **Depends on:** 01 · **Parallel:** yes · **Status:** not started
+**Milestone:** v1 (items 3, 4) · **Depends on:** 01 · **Parallel:** yes · **Status:** in progress
+
+> Materials catalogue (browse: group/vendor filters, search, cuttable/stock-option
+> cells) is live at `/materials`, wired to `getRepo()`. Next: material detail/edit +
+> create/delete mutations, then the Variants list + common-attributes editor.
 
 ## Goal
 `materials.html` + `variants.html` **common-attributes / CRUD only**. Variant version history,
