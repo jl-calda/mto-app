@@ -80,8 +80,17 @@ capture the intent.
   constrained to the system context, qty_kind, applies_when, add/remove materials) with a live
   pane that reacts to the draft rule; persists via `saveModelAction` → `Repository.saveModel`.
   (Golden engine unit tests → Brief 12.)
-- **Brief 08 Algorithms** (most) — `pack_stock`/`place_supports`/`cut_from_stock`,
-  `algorithm` quantity kind, **cut-demand aggregation → CuttingPlan**.
+- **Brief 08 Algorithms + cutting** ✅ — `pack_stock`/`place_supports`(+optimal)/`cut_from_stock`/
+  `pack_stock_2d`; `algorithm` quantity kind + **`algorithm_output` X-refs** (guardrail couplers);
+  cut-demand aggregation → `CuttingPlan`; `cut_too_long`/`high_wastage` warnings.
+- **Brief 10 v2 authoring power** ✅ core — variant + sub-assembly **version history + publish**
+  (pin policy), `place_supports_optimal` (same contract), **chain overrides** (+conflict warning),
+  **cutting diagrams**, extra placement rules. (Follow-ups: multi-grid solver, sub-assembly extraction.)
+- **Brief 11 v3 scale** ◐ — **area take-off** (`/takeoff/area`, `pack_stock_2d` SVG nesting),
+  volume primitive, **inventory** screen + reservation lifecycle, **offcut reuse** in `cut_from_stock`
+  (ladder L-bar 2→1). Auth/realtime/RLS need a keyed Supabase deploy (designed, not enforced here).
+- **Brief 12 cross-cutting** ◐ — **vitest** golden+contract+perf tests (22), **CI** workflow,
+  **PDF export**. Deploy/RLS-enforcement/a11y need a keyed Vercel+Supabase deploy.
 - **Brief 07 Geometry + segmentation** ✅ — `buildGeometry` (segments/junctions/spans/mount
   surfaces by primitive kind) + scope-aware property eval (`evaluatePropertiesScoped`); derived
   segment/junction counts; segmented-length take-off input + segments/junctions panel; SpansEditor
@@ -111,18 +120,25 @@ capture the intent.
   `/sub-assemblies` browse + authoring + `AttachmentsEditor` on `/systems/[id]` built. (Authoring
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
-## What's NEXT (priority order)
-1. **Brief 12** — **testing/CI** first (the one cross-cutting gap now that all v1/v1.5 features
-   exist): golden engine unit tests (the deferred 05/07 tests — ladder 35 rungs, guardrail
-   segmented 19 uprights, combined cut pool, spans/placement), typecheck+build+test in CI, then
-   deploy/RLS/PDF/perf.
-2. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
-   take-off criteria-driven-defaults flash), greedy→ILP solver swap.
-3. **Brief 11 (v3)** scale/collab (auth UI, realtime, inventory/offcuts, area take-off).
+## What's NEXT — all 12 briefs are done or core-done
 
-**9 of 12 briefs done** (01–07, 09 + most of 08). Remaining: 08 tail (pack_stock_2d/offcut reuse),
-10 (v2 version history/ILP), 11 (v3 scale), 12 (testing/CI/deploy/PDF). The whole v1/v1.5 feature
-surface is real and engine-verified.
+The full v1 → v3 feature surface is built and engine-verified (build + typecheck + 22 tests green).
+What remains all needs a **keyed Supabase + Vercel deploy** (can't run in the in-memory workspace),
+plus a few authoring niceties:
+
+1. **Keyed deploy** — set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`, `POST /api/seed`, then:
+   Supabase **Auth + RLS enforcement** (Brief 11 · 39), **transactional inventory reservations**
+   (Brief 12 · no double-claim), **realtime collaboration** (presence/locks), Vercel preview
+   deploys, and the **visuals** Storage bucket (`/api/visuals` already falls back to data URLs).
+2. **Authoring follow-ups** — system-wizard/model-editor **visual pickers** (Brief 02 tail);
+   take-off **criteria-driven-defaults flash** (Brief 06 tail, needs editable criteria);
+   **sub-assembly extraction** + **auto-segmentation policy picker** (Brief 10 · 30/33);
+   **property templates** + **bulk version upgrades** (Brief 11 · 42/44/45); **a11y audit**.
+3. **Solver depth** — full multi-grid `place_supports` (Brief 10 · 29); complex-shape area editor
+   (Brief 11 · 46).
+
+**Status: 8 ✅ done (01–09), 10/11/12 ◐ core-done** (remainder gated on a keyed deploy).
+Engine stays pure + data-driven; `npm test` is the regression guard.
 
 ## How to verify
 ```

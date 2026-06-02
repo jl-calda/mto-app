@@ -1,7 +1,8 @@
 import type { Algorithm, AlgorithmRegistry } from './types';
 import { packStock } from './pack-stock';
-import { placeSupports } from './place-supports';
+import { placeSupports, placeSupportsOptimal } from './place-supports';
 import { cutFromStock } from './cut-from-stock';
+import { packStock2d } from './pack-stock-2d';
 
 export function createRegistry(algos: Algorithm[] = []): AlgorithmRegistry {
   const m: AlgorithmRegistry = new Map();
@@ -10,7 +11,7 @@ export function createRegistry(algos: Algorithm[] = []): AlgorithmRegistry {
 }
 
 /** The standard solvers (greedy v1; ILP swaps in behind the interface in Brief 10). */
-export const standardRegistry: AlgorithmRegistry = createRegistry([packStock, placeSupports, cutFromStock]);
+export const standardRegistry: AlgorithmRegistry = createRegistry([packStock, placeSupports, placeSupportsOptimal, cutFromStock, packStock2d]);
 
 /** Kept for callers that want the default set. */
 export const defaultRegistry: AlgorithmRegistry = standardRegistry;

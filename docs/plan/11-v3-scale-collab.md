@@ -1,6 +1,7 @@
 # Brief 11 — v3 scale & collaboration
 
-**Milestone:** v3 (items 36–46) · **Depends on:** 10 · **Status:** not started
+**Milestone:** v3 (items 36–46) · **Depends on:** 10 · **Status:** ◐ core done
+(36,37,38,40,41 done; 39 auth/realtime + 42–46 bulk/templates need live Supabase Auth/realtime — designed, not enforced here)
 
 ## Goal
 Scale, inventory, realtime, and the higher primitives. This is where Supabase Auth + realtime +
@@ -26,7 +27,21 @@ storage are fully exercised.
 - Presence/collab layer (Supabase realtime); `lib/repo/supabase-repo.ts` realtime hooks; auth UI.
 
 ## Definition of Done
-- [ ] Area take-off nests sheets and reuses offcuts; volume primitive resolves.
-- [ ] Inventory reservations are transactional/consistent (no double-claim).
-- [ ] Collab presence + locks on the area screen; auth + RLS enforced.
-- [ ] Bulk upgrades + property templates + model versioning work.
+- [x] Area take-off nests sheets (`/takeoff/area`, `pack_stock_2d`); volume primitive resolves
+      (input-only chain). Offcut reuse: `cut_from_stock` consults retained offcuts (ladder L-bar 2→1).
+- [~] Inventory reservations: status lifecycle (available→reserved→consumed) via the inventory
+      screen. True no-double-claim needs DB row-locking → Brief 12 (RLS).
+- [ ] Collab presence/locks + auth + RLS: **requires live Supabase Auth/realtime + deploy** — the
+      schema is RLS-ready (Brief 01); not enforceable in the in-memory workspace. Deferred to a
+      keyed deploy (tracked in Brief 12).
+- [~] Bulk upgrades / property templates / model versioning: variant + sub-assembly versioning
+      done (Brief 10); bulk admin upgrades + shared property templates remain follow-ups.
+
+## Status notes (live)
+- Done + verified: area primitive + `/takeoff/area` 2D nesting SVG (40); volume primitive engine
+  support (41); inventory screen + reservation transitions (36, `setInventoryStatusAction` +
+  `Repository.saveInventoryItem`); offcut reuse in `cut_from_stock` + cross-project consultation
+  (37, 38) — wired into the ladder take-off.
+- Needs a keyed Supabase deploy (not buildable in-memory): 39 auth + RLS + realtime collaboration.
+- Follow-ups: 42 property templates, 43 model version pin-on-take-off, 44/45 bulk upgrades,
+  46 complex-shape area editor.

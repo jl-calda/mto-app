@@ -39,8 +39,10 @@ export interface Repository {
 
   listSubAssemblies(): Promise<SubAssembly[]>;
   getSubAssembly(id: string): Promise<SubAssembly | null>;
+  saveSubAssembly(sa: SubAssembly): Promise<SubAssembly>;
 
   listInventory(): Promise<InventoryItem[]>;
+  saveInventoryItem(item: InventoryItem): Promise<InventoryItem>;
 
   listTakeoffs(projectId?: string): Promise<Takeoff[]>;
   getTakeoff(id: string): Promise<Takeoff | null>;

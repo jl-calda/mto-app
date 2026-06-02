@@ -16,6 +16,7 @@ import type {
   ChainRole,
   CuttingPlan,
   DimensionChain,
+  InventoryItem,
   Material,
   Model,
   MtoLine,
@@ -65,6 +66,8 @@ export type ResolveTakeoffArgs = {
   resolveAttachedSystem?: (id: string) => System | undefined;
   /** Resolve a sub-assembly definition by id (for model + nested uses). */
   resolveSubAssembly?: (id: string) => SubAssembly | undefined;
+  /** Available inventory — retained offcuts are consulted by cut_from_stock (Brief 11). */
+  inventory?: InventoryItem[];
   algorithms?: AlgorithmRegistry;
 };
 
@@ -184,10 +187,30 @@ function resolveModel(
   const trace: TraceNode[] = [];
   const attachmentSummaries: AttachmentSummary[] = [];
   const algorithmOutputs = new Map<string, AlgoOutput>();
+  const algoOutByName = new Map<string, AlgoOutput>();
 
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
+
+  // manual chain overrides (Brief 10): override a step, propagate to later
+  // pass-through steps, warn on conflict, and keep the original for revert.
+  if (input.chain_overrides) {
+    const order: ChainRole[] = ['input', 'adjusted', 'constrained', 'quantized'];
+    for (const role of order) {
+      const ov = input.chain_overrides[role];
+      if (ov == null) continue;
+      const idx = chain.steps.findIndex((s) => s.role === role);
+      if (idx < 0) continue;
+      const orig = chain.steps[idx].value;
+      if (ov !== orig) {
+        warnings.push({ level: 'info', source: 'engine', type: 'geometry_mismatch', message: `Chain override · ${role}: engine ${orig.toLocaleString()} → ${ov.toLocaleString()} mm`, affected_fields: ['dimension_chain'] });
+      }
+      chain.steps[idx] = { ...chain.steps[idx], value: ov, source: 'user_override', override_history: { overridden_value: ov, original_engine_value: orig, overridden_at: 0 } };
+      for (let j = idx + 1; j < chain.steps.length; j++) chain.steps[j] = { ...chain.steps[j], value: ov };
+    }
+  }
+
   const vname = variantName(variant);
   const derived: Record<string, number> = { free_ends_count: 2 };
 
@@ -261,6 +284,7 @@ function resolveModel(
       }
       const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [], placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules });
       algorithmOutputs.set(mm.id, out);
+      algoOutByName.set(cfg!.algorithm, out);
       const aqty = out.fields[algo.outputFields[0]] ?? 0;
       if (aqty <= 0) {
         trace.push({ label: mm.material_id, detail: 'skip · algorithm qty 0' });
@@ -289,7 +313,7 @@ function resolveModel(
       continue;
     }
 
-    const q = resolveQuantity(mm.rule, propertyVals, derived, primitiveCount, chain);
+    const q = resolveQuantity(mm.rule, propertyVals, derived, primitiveCount, chain, {}, algoOutByName);
     if (q.kind === 'skip') {
       trace.push({ label: mm.material_id, detail: `skip · ${q.reason}` });
       continue;
@@ -427,6 +451,16 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const root = resolveModel(system, model, variant, input, deps, registry, warnings, [], undefined, 0);
   const lines = root.lines;
 
+  // available retained offcuts per material (cross-project reuse — Brief 11)
+  const offcutsByMat = new Map<string, number[]>();
+  for (const inv of args.inventory ?? []) {
+    if (inv.origin?.kind === 'offcut' && inv.status === 'available' && inv.length) {
+      const arr = offcutsByMat.get(inv.material_id) ?? [];
+      for (let i = 0; i < (inv.quantity ?? 1); i++) arr.push(inv.length);
+      offcutsByMat.set(inv.material_id, arr);
+    }
+  }
+
   // aggregate cut demands per cuttable material → cut_from_stock → stock lines.
   // ONE shared pool: host + sub-assemblies + attachments + connection materials.
   const cuttingPlans: CuttingPlan[] = [];
@@ -435,7 +469,17 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
     if (demands.length === 0) continue;
     const mat = materials.get(matId);
     const allowance = mat?.cut_allowance ?? 0;
-    const out = cutAlgo?.run({ demands, stock_options: mat?.stock_options ?? [], cut_allowance: allowance });
+    const maxStock = mat?.stock_options?.length ? Math.max(...mat.stock_options) : 0;
+    // a single cut longer than the stock can't be made (splicing is out of scope) — warn + drop
+    const cuttable = maxStock > 0 ? demands.filter((d) => d <= maxStock) : demands;
+    const tooLong = demands.length - cuttable.length;
+    if (tooLong > 0) {
+      warnings.push({ level: 'warning', source: 'algorithm', type: 'cut_too_long', message: `${mat?.name ?? matId}: ${tooLong} cut(s) exceed the ${maxStock.toLocaleString()} mm stock length`, affected_fields: [matId] });
+    }
+    if (cuttable.length === 0) continue;
+    const offcuts = offcutsByMat.get(matId) ?? [];
+    const out = cutAlgo?.run({ demands: cuttable, stock_options: mat?.stock_options ?? [], cut_allowance: allowance, offcuts });
+    const offcutsUsed = out?.fields.offcuts_used ?? 0;
     if (!out) continue;
     const stocks = out.fields.stocks ?? 0;
     const detail = out.detail as { plan: { stock_length: number; cuts: number[]; offcut: number }[] };
@@ -460,8 +504,11 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
         unit: mat?.unit ?? 'ea',
         source_material_id: matId,
         cutting_plan: plan,
-        notes: `${demands.length} cut(s)`,
+        notes: `${cuttable.length} cut(s)${offcutsUsed > 0 ? ` · ${offcutsUsed} from offcut` : ''}`,
       });
+    }
+    if (offcutsUsed > 0) {
+      warnings.push({ level: 'info', source: 'inventory', message: `${mat?.name ?? matId}: reused ${offcutsUsed} retained offcut(s) before buying new stock`, affected_fields: [matId] });
     }
     if (out.fields.total_offcut > (mat?.stock_options?.[0] ?? 0)) {
       warnings.push({ level: 'info', source: 'algorithm', type: 'high_wastage', message: `${mat?.name ?? matId}: ${out.fields.total_offcut.toLocaleString()} mm offcut across ${stocks} stock(s)`, affected_fields: [matId] });

@@ -78,8 +78,20 @@ export function createMemoryRepo(): Repository {
     async getSubAssembly(id) {
       return seed.subAssemblies.find((s) => s.id === id) ?? null;
     },
+    async saveSubAssembly(sa) {
+      const i = seed.subAssemblies.findIndex((s) => s.id === sa.id);
+      if (i >= 0) seed.subAssemblies[i] = sa;
+      else seed.subAssemblies.push(sa);
+      return sa;
+    },
     async listInventory() {
       return seed.inventory;
+    },
+    async saveInventoryItem(item) {
+      const i = seed.inventory.findIndex((x) => x.id === item.id);
+      if (i >= 0) seed.inventory[i] = item;
+      else seed.inventory.push(item);
+      return item;
     },
     async listTakeoffs(projectId) {
       return projectId

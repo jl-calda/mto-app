@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
 import { VariantEditor } from '@/components/variants/variant-editor';
+import { VersionTimeline } from '@/components/version-history/VersionTimeline';
 import type { AttrValue, Variant } from '@/lib/types';
 
 const STATUSES = ['all', 'active', 'deprecated', 'archived'] as const;
@@ -124,7 +125,10 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
             </Panel>
 
             <Panel title="Version history">
-              <div className="text-[12px] text-ink-3">Timeline · diff · changelog · pin policy — <span className="mono text-annotation">v2 (Brief 10)</span>.</div>
+              <VersionTimeline versions={selected.versions} current={selected.current_version} />
+              <div className="mt-2.5 rounded p-2.5 text-[11px] text-ink-2" style={{ background: 'var(--bg-2)' }}>
+                Pin policy: publishing a new version never rewrites saved take-offs — they stay on the version they snapshotted (Edit → Publish to cut a new version).
+              </div>
             </Panel>
           </section>
         ) : null}

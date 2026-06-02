@@ -3,10 +3,12 @@
 import { useMemo, useState } from 'react';
 import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
+import { mtoToPdf } from '@/lib/export/pdf';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
-import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
+import { CuttingDiagram } from '@/components/takeoff/CuttingDiagram';
+import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -45,6 +47,7 @@ export function PrimitiveTakeoff({
   iconName = 'post',
   subAssemblies = [],
   attachableSystems = [],
+  inventory = [],
   persist,
 }: {
   system: System;
@@ -58,6 +61,7 @@ export function PrimitiveTakeoff({
   iconName?: string;
   subAssemblies?: SubAssembly[];
   attachableSystems?: System[];
+  inventory?: InventoryItem[];
   persist?: PersistTarget;
 }) {
   const rows = system.variants.rows;
@@ -78,6 +82,12 @@ export function PrimitiveTakeoff({
     }
     return { mode: 'single' as const, total: value };
   }, [primitive, value, canSegment, segmented, segs]);
+
+  // manual dimension-chain overrides (Brief 10)
+  const [chainOverrides, setChainOverrides] = useState<Partial<Record<ChainRole, number>>>({});
+  const [overrideMode, setOverrideMode] = useState(false);
+  const setOverride = (role: ChainRole, v: number | null) =>
+    setChainOverrides((o) => { const n = { ...o }; if (v == null) delete n[role]; else n[role] = v; return n; });
 
   // attachment instances (include + open inputs), keyed by attachment id
   const [attState, setAttState] = useState<Record<string, AttachmentInstance>>(() => {
@@ -104,15 +114,17 @@ export function PrimitiveTakeoff({
         materials,
         resolveSubAssembly,
         resolveAttachedSystem,
+        inventory,
         input: {
           criteria_values: criteria,
           modifier_values: {},
           primitive_input: primitiveInput,
           property_values: {},
           attachments: attachmentInstances,
+          chain_overrides: Object.keys(chainOverrides).length ? chainOverrides : undefined,
         },
       }),
-    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances],
+    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances, chainOverrides, inventory],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;
@@ -145,15 +157,16 @@ export function PrimitiveTakeoff({
   const sig = JSON.stringify({ variantIdx, primitiveInput, attState, mto: result.mto.length, items });
   const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
-  function downloadCsv() {
-    const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
+  function download(blob: Blob, ext: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${title.replace(/[^\w-]+/g, '_')}.csv`;
+    a.download = `${title.replace(/[^\w-]+/g, '_')}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   }
+  const downloadCsv = () => download(new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' }), 'csv');
+  const downloadPdf = () => download(new Blob([mtoToPdf(result.mto, title) as BlobPart], { type: 'application/pdf' }), 'pdf');
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -262,16 +275,34 @@ export function PrimitiveTakeoff({
             )}
 
             <div className="mt-3.5 rounded border border-line bg-panel-2 p-2.5">
-              <div className="uc mb-2">dimension chain</div>
+              <div className="mb-2 flex items-center justify-between">
+                <div className="uc">dimension chain</div>
+                <div className="flex items-center gap-2">
+                  {Object.keys(chainOverrides).length > 0 && <button className="btn sm" onClick={() => setChainOverrides({})}>revert all</button>}
+                  <button onClick={() => setOverrideMode((m) => !m)} className="text-[10px]" style={{ color: overrideMode ? 'var(--accent)' : 'var(--ink-3)' }}>⊷ override</button>
+                </div>
+              </div>
               <div className="flex items-stretch gap-1.5">
                 {result.chain.steps.map((s, i) => {
                   const c = CHAIN_COLOR[s.role];
+                  const overridden = !!s.override_history;
                   return (
                     <div key={i} className="flex items-stretch gap-1.5" style={{ flex: 1 }}>
-                      <div className="min-w-0 flex-1 rounded border border-line p-2" style={{ background: c.bg }}>
-                        <div className="uc" style={{ fontSize: 9, color: c.fg, fontWeight: 600 }}>{s.role}</div>
-                        <div className="mono mt-1 text-[16px]">{s.value.toLocaleString()}</div>
-                        <div className="mono mt-0.5 text-[10px] text-ink-3">{s.name}</div>
+                      <div className="min-w-0 flex-1 rounded border p-2" style={{ background: c.bg, borderColor: overridden ? 'var(--annotation)' : 'var(--line)' }}>
+                        <div className="flex items-center justify-between">
+                          <span className="uc" style={{ fontSize: 9, color: c.fg, fontWeight: 600 }}>{s.role}</span>
+                          {overridden && <button onClick={() => setOverride(s.role, null)} title="revert" className="text-[9px] text-annotation">revert ×</button>}
+                        </div>
+                        {overrideMode ? (
+                          <input className="input mt-1 w-full" style={{ height: 22, fontSize: 13 }} value={chainOverrides[s.role] ?? s.value} onChange={(e) => setOverride(s.role, Math.max(0, Number(e.target.value) || 0))} />
+                        ) : (
+                          <div className="mono mt-1 text-[16px]">{s.value.toLocaleString()}</div>
+                        )}
+                        {overridden ? (
+                          <div className="mono mt-0.5 text-[9px] text-annotation">was {s.override_history!.original_engine_value.toLocaleString()}</div>
+                        ) : (
+                          <div className="mono mt-0.5 text-[10px] text-ink-3">{s.name}</div>
+                        )}
                       </div>
                       {i < result.chain.steps.length - 1 && <span className="flex items-center text-ink-4">›</span>}
                     </div>
@@ -463,6 +494,7 @@ export function PrimitiveTakeoff({
                   <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
                 )}
                 <button className="btn sm" onClick={downloadCsv}>CSV</button>
+                <button className="btn sm" onClick={downloadPdf}>PDF</button>
               </div>
             </div>
             {result.mto.map((l, i) => (
@@ -480,9 +512,12 @@ export function PrimitiveTakeoff({
                   </div>
                   <div className="mono truncate text-[10px] text-ink-3">{l.sku}</div>
                   {l.cutting_plan && (
-                    <div className="mono text-[9px] text-annotation">
-                      cut: {l.cutting_plan.per_stock.length} stock · {l.cutting_plan.per_stock.reduce((s, p) => s + p.cuts.length, 0)} pieces
-                    </div>
+                    <>
+                      <div className="mono text-[9px] text-annotation">
+                        cut: {l.cutting_plan.per_stock.length} stock · {l.cutting_plan.per_stock.reduce((s, p) => s + p.cuts.length, 0)} pieces
+                      </div>
+                      <CuttingDiagram plan={l.cutting_plan} />
+                    </>
                   )}
                 </div>
                 <div className="mono w-[44px] text-right text-[13px] font-medium">{l.qty}</div>
