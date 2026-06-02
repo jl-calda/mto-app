@@ -28,6 +28,8 @@ const materials: Material[] = [
   { id: 'mat-grating', sku: 'VEC-WALK-GRT-AN', name: 'Walkway grating panel · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: false },
   { id: 'mat-walk-rail', sku: 'VEC-WALK-RAIL-3000', name: 'Walkway handrail · 3000 mm', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: true, stock_options: [3000, 6000], cut_allowance: 3 },
   { id: 'mat-walk-post', sku: 'VEC-WALK-POST', name: 'Walkway handrail post', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: false },
+  { id: 'mat-coupler', sku: 'VEC-RAIL-CPL', name: 'Rail coupler (per joint)', vendor: 'Vectaco', unit: 'ea', category: 'Guardrail', attributes: {}, is_cuttable: false },
+  { id: 'mat-toeboard', sku: 'VEC-TOE-3000', name: 'Toe-board · 3000 mm (cut)', vendor: 'Vectaco', unit: 'ea', category: 'Guardrail', attributes: {}, is_cuttable: true, stock_options: [3000, 6000], cut_allowance: 3 },
 ];
 
 const variants: Variant[] = [
@@ -183,6 +185,10 @@ const systems: System[] = [
         materials: [
           { id: 'mm-upright', material_id: 'mat-upright', rule: { qty_kind: 'per', per: { kind: 'property', name: 'intermediate' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-railtop', material_id: 'mat-rail-top', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
+          // coupler per rail joint — reads the pack_stock output via an algorithm_output X-ref
+          { id: 'mm-coupler', material_id: 'mat-coupler', rule: { qty_kind: 'per', per: { kind: 'algorithm_output', algorithm: 'pack_stock', field: 'joints' }, applies_when: { variants: [], criteria: {} } } },
+          // toe-board panels (cut to 1500 between posts) → pooled into cut_from_stock
+          { id: 'mm-toeboard', material_id: 'mat-toeboard', rule: { qty_kind: 'cut', cut_length: 1500, per: { kind: 'property', name: 'intermediate' }, applies_when: { variants: [], criteria: {} } } },
           // per_junction rule: a corner bracket per corner (0 for single-segment runs)
           { id: 'mm-corner', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'junction_corner' }, applies_when: { variants: [], criteria: {} } } },
         ],

@@ -10,6 +10,7 @@ import type {
   Rule,
   VariantSnapshot,
 } from '@/lib/types';
+import type { AlgoOutput } from './algorithms/types';
 import type { GeometryParts } from './geometry/segmentation';
 import { chainLength } from './geometry/dimension-chain';
 
@@ -130,6 +131,7 @@ function resolveX(
   primitiveCount: number,
   chain: DimensionChain,
   parameters: Record<string, number> = {},
+  algoOutputs: Map<string, AlgoOutput> = new Map(),
 ): number {
   if (!per) return 1;
   switch (per.kind) {
@@ -142,7 +144,7 @@ function resolveX(
     case 'unit_of_length':
       return chainLength(chain) / 1000;
     case 'algorithm_output':
-      return 0; // Brief 08
+      return algoOutputs.get(per.algorithm)?.fields[per.field] ?? 0;
     case 'parameter':
       return parameters[per.name] ?? 0; // sub-assembly context (Brief 09)
     default:
@@ -158,12 +160,14 @@ export function resolveQuantity(
   chain: DimensionChain,
   /** Bound parameters when the rule is evaluated inside a sub-assembly use. */
   parameters: Record<string, number> = {},
+  /** Algorithm outputs keyed by algorithm name (for algorithm_output X-refs). */
+  algoOutputs: Map<string, AlgoOutput> = new Map(),
 ): QtyResult {
   switch (rule.qty_kind) {
     case 'fixed':
       return { kind: 'qty', value: rule.qty ?? 1 };
     case 'per': {
-      const base = resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters);
+      const base = resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters, algoOutputs);
       return { kind: 'qty', value: Math.ceil((rule.qty ?? 1) * base) };
     }
     case 'per_length':
@@ -173,7 +177,7 @@ export function resolveQuantity(
         kind: 'cut',
         cut_length:
           rule.cut_length ?? (rule.cut_length_param ? (parameters[rule.cut_length_param] ?? 0) : 0),
-        occurrences: resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters) || 1,
+        occurrences: resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters, algoOutputs) || 1,
       };
     case 'algorithm':
       return { kind: 'skip', reason: 'algorithm-driven (Brief 08)' };

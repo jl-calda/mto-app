@@ -184,6 +184,7 @@ function resolveModel(
   const trace: TraceNode[] = [];
   const attachmentSummaries: AttachmentSummary[] = [];
   const algorithmOutputs = new Map<string, AlgoOutput>();
+  const algoOutByName = new Map<string, AlgoOutput>();
 
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
@@ -261,6 +262,7 @@ function resolveModel(
       }
       const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [], placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules });
       algorithmOutputs.set(mm.id, out);
+      algoOutByName.set(cfg!.algorithm, out);
       const aqty = out.fields[algo.outputFields[0]] ?? 0;
       if (aqty <= 0) {
         trace.push({ label: mm.material_id, detail: 'skip · algorithm qty 0' });
@@ -289,7 +291,7 @@ function resolveModel(
       continue;
     }
 
-    const q = resolveQuantity(mm.rule, propertyVals, derived, primitiveCount, chain);
+    const q = resolveQuantity(mm.rule, propertyVals, derived, primitiveCount, chain, {}, algoOutByName);
     if (q.kind === 'skip') {
       trace.push({ label: mm.material_id, detail: `skip · ${q.reason}` });
       continue;
@@ -435,7 +437,15 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
     if (demands.length === 0) continue;
     const mat = materials.get(matId);
     const allowance = mat?.cut_allowance ?? 0;
-    const out = cutAlgo?.run({ demands, stock_options: mat?.stock_options ?? [], cut_allowance: allowance });
+    const maxStock = mat?.stock_options?.length ? Math.max(...mat.stock_options) : 0;
+    // a single cut longer than the stock can't be made (splicing is out of scope) — warn + drop
+    const cuttable = maxStock > 0 ? demands.filter((d) => d <= maxStock) : demands;
+    const tooLong = demands.length - cuttable.length;
+    if (tooLong > 0) {
+      warnings.push({ level: 'warning', source: 'algorithm', type: 'cut_too_long', message: `${mat?.name ?? matId}: ${tooLong} cut(s) exceed the ${maxStock.toLocaleString()} mm stock length`, affected_fields: [matId] });
+    }
+    if (cuttable.length === 0) continue;
+    const out = cutAlgo?.run({ demands: cuttable, stock_options: mat?.stock_options ?? [], cut_allowance: allowance });
     if (!out) continue;
     const stocks = out.fields.stocks ?? 0;
     const detail = out.detail as { plan: { stock_length: number; cuts: number[]; offcut: number }[] };
@@ -460,7 +470,7 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
         unit: mat?.unit ?? 'ea',
         source_material_id: matId,
         cutting_plan: plan,
-        notes: `${demands.length} cut(s)`,
+        notes: `${cuttable.length} cut(s)`,
       });
     }
     if (out.fields.total_offcut > (mat?.stock_options?.[0] ?? 0)) {
