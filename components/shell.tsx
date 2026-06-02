@@ -46,7 +46,7 @@ export async function Shell({
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar crumbs={crumbs} right={topRight} />
+      <TopBar crumbs={crumbs} right={topRight} env={process.env.VERCEL_ENV ?? 'dev'} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
         <main style={{ flex: 1, minWidth: 0, overflow: scroll ? 'auto' : 'hidden', background: 'var(--bg)' }}>

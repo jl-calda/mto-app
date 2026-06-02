@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   description: 'MTO — construction take-off engine. Material Take-Off for safety-and-access systems.',
 };
 
+// Render every route per request. The app reads from the repository (Supabase
+// when configured, else the in-memory seed); with default static prerendering
+// Next would resolve the repo at build time and freeze a snapshot, so live DB
+// rows + mutations (and the runtime env) would never surface. This cascades to
+// all nested segments. (Route segment config — Next App Router.)
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
