@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { AttrValue, Variant } from '@/lib/types';
+import type { AttrValue, Variant, Visual } from '@/lib/types';
 import { Field, Select, TextInput } from '@/components/system-wizard/parts';
+import { VisualEditor } from '@/components/visual-editor';
 import { saveVariantAction, deleteVariantAction } from '@/app/variants/actions';
 
 const STATUS = ['active', 'deprecated', 'archived'] as const;
@@ -20,6 +21,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
   const [name, setName] = useState(variant.name);
   const [description, setDescription] = useState(variant.description ?? '');
   const [status, setStatus] = useState(variant.status);
+  const [visual, setVisual] = useState<Visual | undefined>(variant.visual);
   const [attrs, setAttrs] = useState<{ key: string; value: string }[]>(
     Object.entries(variant.common_attributes).map(([k, v]) => ({ key: k, value: String(v) })),
   );
@@ -38,6 +40,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
       name,
       description: description || undefined,
       status,
+      visual,
       common_attributes,
       // keep the current version's snapshot in step (full version history → Brief 10)
       versions: variant.versions.map((v) => (v.version === variant.current_version ? { ...v, common_attributes } : v)),
@@ -66,6 +69,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
 
       <div className="overflow-hidden rounded-md border border-line bg-panel">
         <div className="flex flex-col gap-2.5 p-3.5">
+          <Field label="visual"><VisualEditor value={visual} name={name} onChange={setVisual} /></Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="name"><TextInput value={name} onChange={setName} /></Field>
             <Field label="status"><Select value={status} options={STATUS} onChange={setStatus} /></Field>

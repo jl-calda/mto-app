@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Material, MaterialUnit } from '@/lib/types';
 import { Field, NumberInput, Select, TextInput, Toggle } from '@/components/system-wizard/parts';
+import { VisualEditor } from '@/components/visual-editor';
 import { saveMaterialAction, deleteMaterialAction } from '@/app/materials/actions';
 
 const UNITS: MaterialUnit[] = ['ea', 'lin.m', 'kg', 'set', 'hr'];
@@ -48,6 +49,7 @@ export function MaterialEditor({ material, isNew, onClose }: { material: Materia
         <button className="btn sm" onClick={onClose}>Close</button>
       </header>
       <div className="flex flex-col gap-2.5 p-3.5">
+        <Field label="visual"><VisualEditor value={m.visual} name={m.name || m.sku} onChange={(v) => set({ visual: v })} /></Field>
         <Field label="name"><TextInput value={m.name} onChange={(v) => set({ name: v })} placeholder="Material name" /></Field>
         <Field label="sku"><TextInput mono value={m.sku} onChange={(v) => set({ sku: v })} placeholder="VEC-…" /></Field>
         <div className="grid grid-cols-2 gap-2">
