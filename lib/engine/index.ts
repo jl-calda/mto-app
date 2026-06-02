@@ -138,6 +138,24 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
   const propertyVals = evaluateProperties(system.properties, chain, input.property_values ?? {});
   const derived: Record<string, number> = { free_ends_count: 2 };
+  // height auto-split into flights when the climb exceeds the compliance flight max
+  // (Brief 07, simple form — full segmentation geometry layers in later).
+  if (system.primitive.kind === 'height') {
+    const fmKey = Object.keys(modifierValues).find((k) => /flight.*max|max.*flight/i.test(k));
+    const flightMax = fmKey ? num(modifierValues[fmKey]) : 0;
+    const climb = chainValue(chain, 'adjusted');
+    const flights = flightMax > 0 && climb > flightMax ? Math.ceil(climb / flightMax) : 1;
+    derived.flights = flights;
+    derived.rest_platforms = Math.max(0, flights - 1);
+    if (flights > 1) {
+      warnings.push({
+        level: 'info',
+        source: 'engine',
+        message: `Auto-split engaged: ${climb.toLocaleString()} mm exceeds flight max ${flightMax.toLocaleString()} mm → ${flights} flights, ${flights - 1} rest platform(s)`,
+        affected_fields: ['primitive_input'],
+      });
+    }
+  }
   const primitiveCount = system.primitive.kind === 'count' ? rawValue : 0;
   const vname = variantName(variant);
 
@@ -224,7 +242,13 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
     cuttingPlans: [],
     warnings,
     trace,
-    counters: { lines: mto.length, items: mto.reduce((s, l) => s + l.qty, 0) },
+    counters: {
+      lines: mto.length,
+      items: mto.reduce((s, l) => s + l.qty, 0),
+      ...(system.primitive.kind === 'height'
+        ? { flights: derived.flights ?? 1, rest_platforms: derived.rest_platforms ?? 0 }
+        : {}),
+    },
   };
 }
 

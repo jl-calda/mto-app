@@ -2,10 +2,11 @@
 
 **Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** in progress
 
-> Live & engine-computed: Projects list (`/`) + project detail (`/projects/[id]`);
-> anchors (count) take-off; guardrail (length) take-off with the dimension chain +
-> spacing→uprights. Next: rewire the ladder (height) screen to the engine, then CSV
-> export + take-off persistence with snapshots.
+> Live & engine-computed: Projects list (`/`) + project detail; all three v1
+> take-offs — anchors (count), guardrail (length, pack_stock rail), **and the ladder
+> (height) rewired from static to the engine** (flight auto-split, threshold cage
+> hoops, stiles pack_stock, derived rest-platforms). Shared `PrimitiveTakeoff`
+> component. Next: CSV export + take-off persistence with snapshots.
 
 ## Owns
 `index.html` (projects list) + `project.html` (project detail); generic length/count take-offs;

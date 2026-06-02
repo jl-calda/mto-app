@@ -22,27 +22,32 @@ function snapshotFor(r: SystemVariantRef): VariantSnapshot {
     : { source_ref: r, snapshot_version: r.pinned_version, attributes: {} };
 }
 
-export function LengthTakeoff({
+export function PrimitiveTakeoff({
   system,
   model,
   materials,
   criteria,
   title,
+  primitive = 'length',
+  initial = 24000,
+  initialVariant = 0,
+  iconName = 'post',
 }: {
   system: System;
   model: Model;
   materials: Material[];
   criteria: Record<string, string>;
   title: string;
+  primitive?: 'length' | 'height';
+  initial?: number;
+  initialVariant?: number;
+  iconName?: string;
 }) {
   const rows = system.variants.rows;
-  const [variantIdx, setVariantIdx] = useState(0);
-  const [length, setLength] = useState(24000);
+  const [variantIdx, setVariantIdx] = useState(initialVariant);
+  const [value, setValue] = useState(initial);
 
-  const variant = useMemo(
-    () => snapshotFor(rows[variantIdx] ?? rows[0]),
-    [rows, variantIdx],
-  );
+  const variant = useMemo(() => snapshotFor(rows[variantIdx] ?? rows[0]), [rows, variantIdx]);
   const result = useMemo(
     () =>
       resolveTakeoff({
@@ -50,11 +55,17 @@ export function LengthTakeoff({
         model,
         variant,
         materials,
-        input: { criteria_values: criteria, modifier_values: {}, primitive_input: { mode: 'single', total: length }, property_values: {} },
+        input: {
+          criteria_values: criteria,
+          modifier_values: {},
+          primitive_input: primitive === 'height' ? value : { mode: 'single', total: value },
+          property_values: {},
+        },
       }),
-    [system, model, materials, variant, criteria, length],
+    [system, model, materials, variant, criteria, primitive, value],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
+  const flights = result.counters.flights;
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -62,7 +73,7 @@ export function LengthTakeoff({
         <div>
           <h1 className="m-0 text-[22px] font-semibold">{title}</h1>
           <div className="mt-2 flex items-center gap-1.5">
-            <PrimitiveBadge kind="length" />
+            <PrimitiveBadge kind={primitive} />
             <span className="tag">sys · {system.name}</span>
             <span className="tag">mod · {model.name}</span>
           </div>
@@ -70,6 +81,8 @@ export function LengthTakeoff({
         <div className="flex border-l border-line">
           <Stat k="lines" v={result.mto.length} />
           <Stat k="items" v={items} />
+          {primitive === 'height' && flights != null && <Stat k="flights" v={flights} />}
+          {result.warnings.length > 0 && <Stat k="warnings" v={result.warnings.length} highlight="warn" />}
         </div>
       </div>
 
@@ -92,7 +105,11 @@ export function LengthTakeoff({
                       }}
                     >
                       <div className="text-[13px] font-medium">{rowLabel(r)}</div>
-                      <div className="mono mt-1 text-[10px] text-ink-3">{r.kind}</div>
+                      <div className="mono mt-1 text-[10px] text-ink-3">
+                        {r.kind === 'local'
+                          ? Object.entries(r.attributes).map(([k, v]) => `${k}: ${String(v)}`).join(' · ') || 'local'
+                          : r.kind}
+                      </div>
                     </button>
                   );
                 })}
@@ -111,16 +128,16 @@ export function LengthTakeoff({
             </div>
           </Section>
 
-          <Section index="03" title="Primitive · length">
+          <Section index="03" title={`Primitive · ${primitive}`}>
             <div className="flex items-center gap-2">
-              <button className="btn" onClick={() => setLength((l) => Math.max(0, l - 1000))} aria-label="decrease">−</button>
+              <button className="btn" onClick={() => setValue((l) => Math.max(0, l - 1000))} aria-label="decrease">−</button>
               <input
                 className="input w-[120px] text-center"
-                value={length}
-                onChange={(e) => setLength(Math.max(0, Number(e.target.value) || 0))}
+                value={value}
+                onChange={(e) => setValue(Math.max(0, Number(e.target.value) || 0))}
               />
               <span className="mono text-[12px] text-ink-3">mm</span>
-              <button className="btn" onClick={() => setLength((l) => l + 1000)} aria-label="increase">+</button>
+              <button className="btn" onClick={() => setValue((l) => l + 1000)} aria-label="increase">+</button>
             </div>
 
             <div className="mt-3.5 rounded border border-line bg-panel-2 p-2.5">
@@ -135,14 +152,26 @@ export function LengthTakeoff({
                         <div className="mono mt-1 text-[16px]">{s.value.toLocaleString()}</div>
                         <div className="mono mt-0.5 text-[10px] text-ink-3">{s.name}</div>
                       </div>
-                      {i < result.chain.steps.length - 1 && (
-                        <span className="flex items-center text-ink-4">›</span>
-                      )}
+                      {i < result.chain.steps.length - 1 && <span className="flex items-center text-ink-4">›</span>}
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {result.warnings.map((w, i) => (
+              <div
+                key={i}
+                className="mt-2.5 flex items-start gap-2 rounded p-2.5 text-[11px]"
+                style={{
+                  background: w.level === 'warning' ? 'var(--warn-soft)' : 'var(--selected)',
+                  border: `1px solid ${w.level === 'warning' ? '#E8C97A' : 'var(--accent-line)'}`,
+                }}
+              >
+                <span className="mono" style={{ color: w.level === 'warning' ? 'var(--warn)' : 'var(--accent)' }}>●</span>
+                <span className="text-ink-2">{w.message}</span>
+              </div>
+            ))}
           </Section>
 
           {system.properties.length > 0 && (
@@ -153,7 +182,9 @@ export function LengthTakeoff({
                     <span className="mono text-[12px] font-semibold">{p.name}</span>
                     <span className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>{p.archetype}</span>
                     <span className="flex-1" />
-                    <span className="mono text-[10px] text-ink-3">scope · {typeof p.scope === 'string' ? p.scope : `per_span:${p.scope.span_name}`}</span>
+                    <span className="mono text-[10px] text-ink-3">
+                      scope · {typeof p.scope === 'string' ? p.scope : `per_span:${p.scope.span_name}`}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -172,7 +203,7 @@ export function LengthTakeoff({
             </div>
             {result.mto.map((l, i) => (
               <div key={i} className="flex items-center gap-2 border-b border-line px-3.5 py-2 last:border-b-0">
-                <Visual visual={l.material_visual ?? { kind: 'icon', name: 'post' }} name={l.description} size={22} rounded={3} />
+                <Visual visual={l.material_visual ?? { kind: 'icon', name: iconName }} name={l.description} size={22} rounded={3} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[12px]">{l.description}</div>
                   <div className="mono truncate text-[10px] text-ink-3">{l.sku}</div>
@@ -183,11 +214,6 @@ export function LengthTakeoff({
             ))}
             {result.mto.length === 0 && (
               <div className="px-3.5 py-8 text-center text-[12px] text-ink-3">No lines fire for these inputs.</div>
-            )}
-            {result.trace.some((t) => t.detail?.startsWith('skip · algorithm')) && (
-              <div className="border-t border-line px-3.5 py-2 text-[11px] text-ink-3">
-                Some lines are algorithm-driven (pack_stock) — they arrive in Brief 08.
-              </div>
             )}
           </div>
         </div>

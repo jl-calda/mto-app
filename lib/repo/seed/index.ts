@@ -19,6 +19,9 @@ const materials: Material[] = [
   { id: 'mat-rail-top', sku: 'VEC-RAIL-T-3000-AN', name: 'Top rail · 3000 mm · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Guardrail', attributes: {}, is_cuttable: true, stock_options: [3000, 6000], cut_allowance: 3 },
   { id: 'mat-upright', sku: 'VEC-UPR-FS-AN', name: 'Guardrail upright · floor fix', vendor: 'Vectaco', unit: 'ea', category: 'Guardrail', attributes: {}, is_cuttable: false },
   { id: 'mat-anchor', sku: 'VEC-ANC-SS', name: 'Anchor point · stainless', vendor: 'Vectaco', unit: 'ea', category: 'Anchor', attributes: {}, is_cuttable: false },
+  { id: 'mat-stringer', sku: 'VEC-LDR-STR-AN', name: 'Cage stringer · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: false },
+  { id: 'mat-restplatform', sku: 'VEC-LDR-RP-AN', name: 'Rest platform', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: false },
+  { id: 'mat-cert', sku: 'VEC-CERT-NF', name: 'Compliance certificate · NF E85-016', vendor: 'Vectaco', unit: 'ea', category: 'Compliance', attributes: {}, is_cuttable: false },
 ];
 
 const variants: Variant[] = [
@@ -57,21 +60,28 @@ const systems: System[] = [
       attribute_columns: [{ name: 'has_cage', type: { kind: 'bool' } }],
       rows: [
         { kind: 'local', name: 'Standard', attributes: { has_cage: false } },
-        { kind: 'library', variant_id: 'var-cage', pinned_version: 1 },
+        { kind: 'local', name: 'Cage ladder', attributes: { has_cage: true } },
+        { kind: 'local', name: 'Side-exit cage', attributes: { has_cage: true, side_exit: true } },
       ],
     },
     criteria: [{ library_id: 'compliance_code', default_value: 'NF E85-016' }, { library_id: 'material_finish', default_value: 'anodized' }],
     properties: [
       { catalog_id: 'rungs', name: 'rungs', archetype: 'spacing', inputs: [{ name: 'spacing', label: 'Spacing', type: { kind: 'distance' }, required: true, default: 280 }], scope: 'per_segment' },
-      { catalog_id: 'cage_hoops', name: 'cage_hoops', archetype: 'threshold', inputs: [], scope: { kind: 'per_span', span_name: 'cage_zone' } },
+      { catalog_id: 'cage_hoops', name: 'cage_hoops', archetype: 'threshold', inputs: [{ name: 'threshold', label: 'Threshold', type: { kind: 'distance' }, required: true, default: 3000 }, { name: 'hoop_spacing', label: 'Hoop spacing', type: { kind: 'distance' }, required: true, default: 280 }], scope: { kind: 'per_span', span_name: 'cage_zone' } },
+      { catalog_id: 'mounting_brackets', name: 'mounting_brackets', archetype: 'spacing', inputs: [{ name: 'spacing', label: 'Spacing', type: { kind: 'distance' }, required: true, default: 1600 }], scope: 'per_mount_surface' },
     ],
     models: [
       {
         id: 'mdl-ladder-nf', name: 'NF E85-016 cage ladder', system_id: 'sys-ladder', status: 'published',
         modifier_defaults: { handhold_extension: 250 }, sub_assembly_uses: [], sku_lookups: [], criteria_driven_defaults: [],
         materials: [
+          { id: 'mm-stile', material_id: 'mat-stile', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-rung', material_id: 'mat-rung', rule: { qty_kind: 'per', per: { kind: 'property', name: 'rungs' }, applies_when: { variants: [], criteria: {} } } },
-          { id: 'mm-cage', material_id: 'mat-cage', rule: { qty_kind: 'per', per: { kind: 'property', name: 'cage_hoops' }, applies_when: { variants: ['Cage ladder'], criteria: {} } } },
+          { id: 'mm-cage', material_id: 'mat-cage', rule: { qty_kind: 'per', per: { kind: 'property', name: 'cage_hoops' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
+          { id: 'mm-stringer', material_id: 'mat-stringer', rule: { qty_kind: 'fixed', qty: 4, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
+          { id: 'mm-bracket', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'property', name: 'mounting_brackets' }, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-restplatform', material_id: 'mat-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-cert', material_id: 'mat-cert', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],
@@ -125,7 +135,7 @@ const projects: Project[] = [
     takeoffs: [
       {
         id: 'tko-ladder', name: 'Plant access ladder · L1→L4', system_id: 'sys-ladder', model_id: 'mdl-ladder-nf',
-        variant_choice: { source_ref: { kind: 'library', variant_id: 'var-cage', pinned_version: 1 }, snapshot_version: 1, attributes: { has_cage: true } },
+        variant_choice: { source_ref: { kind: 'local', name: 'Cage ladder', attributes: { has_cage: true } }, attributes: { has_cage: true } },
         criteria_values: { compliance_code: 'NF E85-016', material_finish: 'anodized' },
         modifier_values: {}, primitive_input: 9200, property_values: { rungs: { spacing: 280 } },
       },

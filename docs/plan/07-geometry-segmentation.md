@@ -1,6 +1,11 @@
 # Brief 07 — Segmentation + geometry + spans/placement editors
 
-**Milestone:** v1.5 (items 10–13, 24, + spans/placement editors of item 23) · **Depends on:** 06 · **Status:** not started
+**Milestone:** v1.5 (items 10–13, 24, + spans/placement editors of item 23) · **Depends on:** 06 · **Status:** in progress
+
+> Height flight auto-split implemented (engine): climb > flight_max → `flights` /
+> `rest_platforms` derived counts + an "auto-split engaged" info warning; the ladder
+> splits into 2 flights. Next: full canonical geometry (segments/junctions/spans/
+> mount-surfaces) + segmentable length + the dimension-chain derivations panel.
 
 ## Goal
 Engine geometry depth (segments, junctions, spans, mount surfaces, scope instances, dimension-

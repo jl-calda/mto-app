@@ -1,5 +1,5 @@
 import { Shell } from '@/components/chrome';
-import { LengthTakeoff } from '@/components/takeoff/length-takeoff';
+import { PrimitiveTakeoff } from '@/components/takeoff/primitive-takeoff';
 import { getRepo } from '@/lib/repo';
 
 export default async function GuardrailTakeoffPage() {
@@ -21,7 +21,16 @@ export default async function GuardrailTakeoffPage() {
 
   return (
     <Shell navActive="projects" crumbs={[{ label: 'Projects', href: '/' }, { label: 'East elev. guardrail · live' }]}>
-      <LengthTakeoff system={system} model={model} materials={materials} criteria={criteria} title="East elevation guardrail" />
+      <PrimitiveTakeoff
+        system={system}
+        model={model}
+        materials={materials}
+        criteria={criteria}
+        title="East elevation guardrail"
+        primitive="length"
+        initial={24000}
+        iconName="post"
+      />
     </Shell>
   );
 }
