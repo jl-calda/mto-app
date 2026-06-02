@@ -97,6 +97,7 @@ function resolveX(
   derived: Record<string, number>,
   primitiveCount: number,
   chain: DimensionChain,
+  parameters: Record<string, number> = {},
 ): number {
   if (!per) return 1;
   switch (per.kind) {
@@ -111,7 +112,7 @@ function resolveX(
     case 'algorithm_output':
       return 0; // Brief 08
     case 'parameter':
-      return 0; // sub-assembly context, Brief 09
+      return parameters[per.name] ?? 0; // sub-assembly context (Brief 09)
     default:
       return 0;
   }
@@ -123,12 +124,14 @@ export function resolveQuantity(
   derived: Record<string, number>,
   primitiveCount: number,
   chain: DimensionChain,
+  /** Bound parameters when the rule is evaluated inside a sub-assembly use. */
+  parameters: Record<string, number> = {},
 ): QtyResult {
   switch (rule.qty_kind) {
     case 'fixed':
       return { kind: 'qty', value: rule.qty ?? 1 };
     case 'per': {
-      const base = resolveX(rule.per, propertyVals, derived, primitiveCount, chain);
+      const base = resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters);
       return { kind: 'qty', value: Math.ceil((rule.qty ?? 1) * base) };
     }
     case 'per_length':
@@ -136,8 +139,9 @@ export function resolveQuantity(
     case 'cut':
       return {
         kind: 'cut',
-        cut_length: rule.cut_length ?? 0,
-        occurrences: resolveX(rule.per, propertyVals, derived, primitiveCount, chain) || 1,
+        cut_length:
+          rule.cut_length ?? (rule.cut_length_param ? (parameters[rule.cut_length_param] ?? 0) : 0),
+        occurrences: resolveX(rule.per, propertyVals, derived, primitiveCount, chain, parameters) || 1,
       };
     case 'algorithm':
       return { kind: 'skip', reason: 'algorithm-driven (Brief 08)' };

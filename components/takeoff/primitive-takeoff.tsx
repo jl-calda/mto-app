@@ -5,7 +5,7 @@ import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
-import type { ChainRole, Material, Model, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
+import type { AttachmentInstance, ChainRole, Material, Model, SubAssembly, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -33,6 +33,8 @@ export function PrimitiveTakeoff({
   initial = 24000,
   initialVariant = 0,
   iconName = 'post',
+  subAssemblies = [],
+  attachableSystems = [],
 }: {
   system: System;
   model: Model;
@@ -43,12 +45,29 @@ export function PrimitiveTakeoff({
   initial?: number;
   initialVariant?: number;
   iconName?: string;
+  subAssemblies?: SubAssembly[];
+  attachableSystems?: System[];
 }) {
   const rows = system.variants.rows;
   const [variantIdx, setVariantIdx] = useState(initialVariant);
   const [value, setValue] = useState(initial);
 
+  // attachment instances (include + open inputs), keyed by attachment id
+  const [attState, setAttState] = useState<Record<string, AttachmentInstance>>(() => {
+    const o: Record<string, AttachmentInstance> = {};
+    for (const att of system.attachments ?? []) {
+      o[att.id] = { attachment_id: att.id, included: att.default_included, primitive_input: { mode: 'single', total: 4000 } };
+    }
+    return o;
+  });
+
+  const saById = useMemo(() => new Map(subAssemblies.map((s) => [s.id, s])), [subAssemblies]);
+  const sysById = useMemo(() => new Map(attachableSystems.map((s) => [s.id, s])), [attachableSystems]);
+  const resolveSubAssembly = useMemo(() => (id: string) => saById.get(id), [saById]);
+  const resolveAttachedSystem = useMemo(() => (id: string) => sysById.get(id), [sysById]);
+
   const variant = useMemo(() => snapshotFor(rows[variantIdx] ?? rows[0]), [rows, variantIdx]);
+  const attachmentInstances = useMemo(() => Object.values(attState), [attState]);
   const result = useMemo(
     () =>
       resolveTakeoff({
@@ -56,14 +75,17 @@ export function PrimitiveTakeoff({
         model,
         variant,
         materials,
+        resolveSubAssembly,
+        resolveAttachedSystem,
         input: {
           criteria_values: criteria,
           modifier_values: {},
           primitive_input: primitive === 'height' ? value : { mode: 'single', total: value },
           property_values: {},
+          attachments: attachmentInstances,
         },
       }),
-    [system, model, materials, variant, criteria, primitive, value],
+    [system, model, materials, variant, criteria, primitive, value, resolveSubAssembly, resolveAttachedSystem, attachmentInstances],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;

@@ -23,6 +23,11 @@ const materials: Material[] = [
   { id: 'mat-restplatform', sku: 'VEC-LDR-RP-AN', name: 'Rest platform', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: false },
   { id: 'mat-cert', sku: 'VEC-CERT-NF', name: 'Compliance certificate · NF E85-016', vendor: 'Vectaco', unit: 'ea', category: 'Compliance', attributes: {}, is_cuttable: false },
   { id: 'mat-lbar', sku: 'VEC-LBAR-6000', name: 'L-bar · 6000 mm (cut to length)', vendor: 'Vectaco', unit: 'ea', category: 'Mounting', attributes: {}, is_cuttable: true, stock_options: [6000], cut_allowance: 3, min_offcut_to_retain: 300 },
+  { id: 'mat-fastener', sku: 'VEC-FX-M10', name: 'Anchor bolt · M10×80 · SS', vendor: 'Vectaco', unit: 'ea', category: 'Mounting', attributes: {}, is_cuttable: false },
+  { id: 'mat-gate', sku: 'VEC-GATE-SC', name: 'Self-closing safety gate', vendor: 'Vectaco', unit: 'ea', category: 'Mounting', attributes: {}, is_cuttable: false },
+  { id: 'mat-grating', sku: 'VEC-WALK-GRT-AN', name: 'Walkway grating panel · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: false },
+  { id: 'mat-walk-rail', sku: 'VEC-WALK-RAIL-3000', name: 'Walkway handrail · 3000 mm', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: true, stock_options: [3000, 6000], cut_allowance: 3 },
+  { id: 'mat-walk-post', sku: 'VEC-WALK-POST', name: 'Walkway handrail post', vendor: 'Vectaco', unit: 'ea', category: 'Walkway', attributes: {}, is_cuttable: false },
 ];
 
 const variants: Variant[] = [
@@ -38,15 +43,24 @@ const variants: Variant[] = [
   },
 ];
 
+const wallBracketParams = [
+  { name: 'count', type: { kind: 'integer' } as const, required: true, description: 'Number of bracket positions to mount' },
+  { name: 'bracket_length', type: { kind: 'distance' } as const, required: true, default: 800, description: 'Cut length of the L-bar mounting bar' },
+];
+const wallBracketMaterials = [
+  { id: 'sam-bracket', material_id: 'mat-bracket', rule: { qty_kind: 'per' as const, qty: 1, per: { kind: 'parameter' as const, name: 'count' }, applies_when: { variants: [], criteria: {} } } },
+  { id: 'sam-fastener', material_id: 'mat-fastener', rule: { qty_kind: 'per' as const, qty: 2, per: { kind: 'parameter' as const, name: 'count' }, applies_when: { variants: [], criteria: {} } } },
+  { id: 'sam-lbar', material_id: 'mat-lbar', rule: { qty_kind: 'cut' as const, cut_length_param: 'bracket_length', per: { kind: 'parameter' as const, name: 'count' }, applies_when: { variants: [], criteria: {} } } },
+];
+
 const subAssemblies: SubAssembly[] = [
   {
     id: 'sa-wall-bracket', name: 'Wall bracket assembly', category: 'Mounting',
+    description: 'A mounting position: one wall bracket, two anchor bolts, and a cut L-bar packer. Scales by the bound `count` parameter.',
     current_version: 1, status: 'active',
-    parameters: [{ name: 'bracket_length', type: { kind: 'distance' }, required: true }],
-    materials: [
-      { id: 'sam-bracket', material_id: 'mat-bracket', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
-    ],
-    versions: [{ version: 1, published_at: 0, changelog: 'Initial', parameters: [{ name: 'bracket_length', type: { kind: 'distance' }, required: true }], materials: [] }],
+    parameters: wallBracketParams,
+    materials: wallBracketMaterials,
+    versions: [{ version: 1, published_at: 0, changelog: 'Initial', parameters: wallBracketParams, materials: wallBracketMaterials }],
   },
 ];
 
@@ -74,16 +88,25 @@ const systems: System[] = [
     models: [
       {
         id: 'mdl-ladder-nf', name: 'NF E85-016 cage ladder', system_id: 'sys-ladder', status: 'published',
-        modifier_defaults: { handhold_extension: 250 }, sub_assembly_uses: [], sku_lookups: [], criteria_driven_defaults: [],
+        modifier_defaults: { handhold_extension: 250 }, sku_lookups: [], criteria_driven_defaults: [],
+        // The bracket mounting is a reusable sub-assembly: bracket + bolts + cut L-bar,
+        // scaled by `count` ← the mounting_brackets property, with bracket_length pinned.
+        sub_assembly_uses: [
+          {
+            id: 'sau-wall-bracket', sub_assembly_id: 'sa-wall-bracket', pinned_version: 1, scope: 'per_mount_surface',
+            parameter_bindings: {
+              count: { kind: 'property_ref', property_name: 'mounting_brackets' },
+              bracket_length: { kind: 'literal', value: 800 },
+            },
+          },
+        ],
         materials: [
           { id: 'mm-stile', material_id: 'mat-stile', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-rung', material_id: 'mat-rung', rule: { qty_kind: 'per', per: { kind: 'property', name: 'rungs' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-cage', material_id: 'mat-cage', rule: { qty_kind: 'per', per: { kind: 'property', name: 'cage_hoops' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
           { id: 'mm-stringer', material_id: 'mat-stringer', rule: { qty_kind: 'fixed', qty: 4, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
-          { id: 'mm-bracket', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'property', name: 'mounting_brackets' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-restplatform', material_id: 'mat-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-cert', material_id: 'mat-cert', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
-          { id: 'mm-lbar', material_id: 'mat-lbar', rule: { qty_kind: 'cut', cut_length: 800, per: { kind: 'property', name: 'mounting_brackets' }, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],

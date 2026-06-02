@@ -9,6 +9,8 @@ export type Rule = {
   per?: PerTarget;
   unit?: string;
   cut_length?: number;
+  /** Sub-assembly context: take the cut length from a bound parameter by name. */
+  cut_length_param?: string;
   algorithm_config?: AlgorithmCall;
   emit_per?: Emission[];
   emit_once?: Emission[];
