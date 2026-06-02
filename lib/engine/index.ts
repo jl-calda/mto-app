@@ -189,6 +189,25 @@ function resolveModel(
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
+
+  // manual chain overrides (Brief 10): override a step, propagate to later
+  // pass-through steps, warn on conflict, and keep the original for revert.
+  if (input.chain_overrides) {
+    const order: ChainRole[] = ['input', 'adjusted', 'constrained', 'quantized'];
+    for (const role of order) {
+      const ov = input.chain_overrides[role];
+      if (ov == null) continue;
+      const idx = chain.steps.findIndex((s) => s.role === role);
+      if (idx < 0) continue;
+      const orig = chain.steps[idx].value;
+      if (ov !== orig) {
+        warnings.push({ level: 'info', source: 'engine', type: 'geometry_mismatch', message: `Chain override · ${role}: engine ${orig.toLocaleString()} → ${ov.toLocaleString()} mm`, affected_fields: ['dimension_chain'] });
+      }
+      chain.steps[idx] = { ...chain.steps[idx], value: ov, source: 'user_override', override_history: { overridden_value: ov, original_engine_value: orig, overridden_at: 0 } };
+      for (let j = idx + 1; j < chain.steps.length; j++) chain.steps[j] = { ...chain.steps[j], value: ov };
+    }
+  }
+
   const vname = variantName(variant);
   const derived: Record<string, number> = { free_ends_count: 2 };
 

@@ -5,6 +5,7 @@
 import type {
   AttachmentInstance,
   AttrValue,
+  ChainRole,
   DimensionChain,
   Material,
   SubAssembly,
@@ -19,6 +20,8 @@ export type TakeoffInput = {
   property_values: Record<string, unknown>;
   /** Per-attachment user choices (include/exclude + open inputs). */
   attachments?: AttachmentInstance[];
+  /** Manual overrides of dimension-chain step values (Brief 10). */
+  chain_overrides?: Partial<Record<ChainRole, number>>;
 };
 
 export type TraceNode = { label: string; detail?: string; children?: TraceNode[] };

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { AttrValue, Variant, Visual } from '@/lib/types';
 import { Field, Select, TextInput } from '@/components/system-wizard/parts';
 import { VisualEditor } from '@/components/visual-editor';
-import { saveVariantAction, deleteVariantAction } from '@/app/variants/actions';
+import { saveVariantAction, deleteVariantAction, publishVariantAction } from '@/app/variants/actions';
 
 const STATUS = ['active', 'deprecated', 'archived'] as const;
 
@@ -27,9 +27,21 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [changelog, setChangelog] = useState('');
 
   const setAttr = (i: number, patch: Partial<{ key: string; value: string }>) =>
     setAttrs((a) => a.map((row, j) => (j === i ? { ...row, ...patch } : row)));
+
+  async function publish() {
+    if (isNew) { setError('save first, then publish'); return; }
+    setBusy(true);
+    setError(undefined);
+    const common_attributes = Object.fromEntries(attrs.filter((a) => a.key.trim()).map((a) => [a.key.trim(), coerce(a.value)]));
+    const res = await publishVariantAction({ ...variant, name, description: description || undefined, status, visual, common_attributes }, changelog);
+    setBusy(false);
+    if (res.ok) { router.refresh(); onClose(); }
+    else setError(res.error ?? 'publish failed');
+  }
 
   async function save() {
     setBusy(true);
@@ -97,6 +109,17 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
           </div>
         </div>
       </div>
+
+      {!isNew && (
+        <div className="overflow-hidden rounded-md border border-line bg-panel p-3.5">
+          <div className="uc mb-1.5">publish new version · v{variant.current_version + 1}</div>
+          <div className="flex gap-2">
+            <input className="input text flex-1" placeholder="changelog…" value={changelog} onChange={(e) => setChangelog(e.target.value)} />
+            <button className="btn sm" onClick={publish} disabled={busy}>Publish</button>
+          </div>
+          <div className="mt-1.5 text-[10px] text-ink-3">Snapshots the current attributes as v{variant.current_version + 1}. Take-offs pinned to older versions are unaffected.</div>
+        </div>
+      )}
 
       {error && <div className="mono text-[11px] text-err">{error}</div>}
       <div className="flex items-center justify-between">

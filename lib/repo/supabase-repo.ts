@@ -98,6 +98,14 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     },
     listSubAssemblies: () => listPayloads<SubAssembly>('sub_assembly'),
     getSubAssembly: (id) => getPayload<SubAssembly>('sub_assembly', id),
+    async saveSubAssembly(sa) {
+      const { error } = await db.from('sub_assembly').upsert({
+        id: sa.id, name: sa.name, category: sa.category ?? null, status: sa.status,
+        current_version: sa.current_version, payload: sa,
+      });
+      if (error) throw new Error(`sub_assembly#${sa.id}: ${error.message}`);
+      return sa;
+    },
     listInventory: () => listPayloads<InventoryItem>('inventory_item'),
     listTakeoffs: (projectId) => listPayloadsWhere<Takeoff>('takeoff', 'project_id', projectId),
     getTakeoff: (id) => getPayload<Takeoff>('takeoff', id),

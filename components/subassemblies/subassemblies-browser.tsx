@@ -1,8 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
+import { VersionTimeline } from '@/components/version-history/VersionTimeline';
+import { publishSubAssemblyAction } from '@/app/sub-assemblies/actions';
 import type { AttrValue, InputType, Material, ParameterDef, PerTarget, Rule, SubAssembly, SubAssemblyMaterial } from '@/lib/types';
 
 export type Usage = { model_id: string; model_name: string; system_name: string };
@@ -171,7 +174,7 @@ function DetailView({ sub, matById, usage }: { sub: SubAssembly; matById: Map<st
       </Panel>
 
       <Panel title="Version history">
-        <div className="text-[12px] text-ink-3">Timeline · diff · changelog · pin policy — <span className="mono text-annotation">v2 (Brief 10)</span>.</div>
+        <VersionTimeline versions={sub.versions} current={sub.current_version} />
       </Panel>
     </>
   );
@@ -179,12 +182,22 @@ function DetailView({ sub, matById, usage }: { sub: SubAssembly; matById: Map<st
 
 // ── editor (authoring; persistence lands in Brief 10) ──
 function EditorView({ sub, matById, tab, setTab }: { sub: SubAssembly; matById: Map<string, Material>; tab: Tab; setTab: (t: Tab) => void }) {
+  const router = useRouter();
+  const [changelog, setChangelog] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function publish() {
+    setBusy(true);
+    const res = await publishSubAssemblyAction(sub, changelog);
+    setBusy(false);
+    if (res.ok) router.refresh();
+  }
   return (
     <>
       <div className="flex items-center gap-2 rounded-md border border-accent-line p-2.5" style={{ background: 'var(--selected)' }}>
         <span className="mono text-[11px] text-accent">draft editor</span>
-        <span className="flex-1 text-[11px] text-ink-2">Edits are local — authoring mutations &amp; version history land in <span className="mono">Brief 10</span>.</span>
-        <button className="btn primary sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>Publish v{sub.current_version + 1}</button>
+        <span className="flex-1 text-[11px] text-ink-2">Field-level mutations land in v3; <span className="mono">Publish</span> snapshots the current parameters + materials as v{sub.current_version + 1}.</span>
+        <input className="input text" style={{ width: 160 }} placeholder="changelog…" value={changelog} onChange={(e) => setChangelog(e.target.value)} />
+        <button className="btn primary sm" onClick={publish} disabled={busy}>{busy ? '…' : `Publish v${sub.current_version + 1}`}</button>
       </div>
 
       <div className="overflow-hidden rounded-md border border-line bg-panel">
