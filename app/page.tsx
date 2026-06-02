@@ -1,7 +1,12 @@
-import { redirect } from 'next/navigation';
+import { Shell } from '@/components/chrome';
+import { ProjectsBrowser } from '@/components/projects/projects-browser';
+import { getRepo } from '@/lib/repo';
 
-// The take-off-ladder screen is the implemented deliverable.
-// Root lands there so `next dev` opens directly onto it.
-export default function Home() {
-  redirect('/takeoff/ladder');
+export default async function Home() {
+  const projects = await getRepo().listProjects();
+  return (
+    <Shell navActive="projects" crumbs={[{ label: 'Projects' }]}>
+      <ProjectsBrowser projects={projects} />
+    </Shell>
+  );
 }
