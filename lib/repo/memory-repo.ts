@@ -32,6 +32,14 @@ export function createMemoryRepo(): Repository {
     async getModel(id) {
       return allModels().find((m) => m.id === id) ?? null;
     },
+    async saveModel(model) {
+      const sys = seed.systems.find((s) => s.id === model.system_id);
+      if (!sys) throw new Error(`system ${model.system_id} not found`);
+      const i = sys.models.findIndex((m) => m.id === model.id);
+      if (i >= 0) sys.models[i] = model;
+      else sys.models.push(model);
+      return model;
+    },
     async listMaterials() {
       return seed.materials;
     },

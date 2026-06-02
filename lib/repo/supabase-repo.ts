@@ -51,6 +51,22 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     },
     listModels: (systemId) => listPayloadsWhere<Model>('model', 'system_id', systemId),
     getModel: (id) => getPayload<Model>('model', id),
+    async saveModel(model) {
+      const { error } = await db.from('model').upsert({
+        id: model.id, system_id: model.system_id, name: model.name, status: model.status,
+        current_version: model.current_version ?? null, payload: model,
+      });
+      if (error) throw new Error(`model#${model.id}: ${error.message}`);
+      // keep the parent system payload's models[] in step (getSystem reads the payload)
+      const sys = await getPayload<System>('system', model.system_id);
+      if (sys) {
+        const models = sys.models ?? [];
+        const i = models.findIndex((m) => m.id === model.id);
+        const next = i >= 0 ? models.map((m) => (m.id === model.id ? model : m)) : [...models, model];
+        await db.from('system').upsert({ id: sys.id, name: sys.name, description: sys.description ?? null, primitive_kind: sys.primitive.kind, payload: { ...sys, models: next } });
+      }
+      return model;
+    },
     listMaterials: () => listPayloads<Material>('material'),
     getMaterial: (id) => getPayload<Material>('material', id),
     async saveMaterial(material) {

@@ -24,6 +24,8 @@ export interface Repository {
 
   listModels(systemId?: string): Promise<Model[]>;
   getModel(id: string): Promise<Model | null>;
+  /** Upsert a model into its parent system. */
+  saveModel(model: Model): Promise<Model>;
 
   listMaterials(): Promise<Material[]>;
   getMaterial(id: string): Promise<Material | null>;

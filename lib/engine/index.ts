@@ -535,7 +535,10 @@ export function deriveRuleContext(system: System, _model?: Model): RuleContext {
     kind: (p.archetype === 'rate' || p.archetype === 'stock' ? 'length' : 'count') as 'count' | 'length',
   }));
   const modifiers = system.modifiers.map((m) => m.name);
-  const derived = ['free_ends_count'];
+  // derived counters the engine exposes — height auto-split adds flights / rest_platforms.
+  const derived = system.primitive.kind === 'height'
+    ? ['free_ends_count', 'flights', 'rest_platforms']
+    : ['free_ends_count'];
   const xrefs: XRef[] = [
     ...properties.map((p): XRef => ({ kind: 'property', name: p.name })),
     ...properties.filter((p) => p.kind === 'length').map((p): XRef => ({ kind: 'property_length', name: p.name })),
