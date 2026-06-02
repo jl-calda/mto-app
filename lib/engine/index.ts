@@ -19,9 +19,10 @@ import type {
   VariantSnapshot,
   Warning,
 } from '@/lib/types';
-import type { AlgorithmRegistry } from './algorithms/types';
+import type { AlgorithmRegistry, AlgoOutput } from './algorithms/types';
 import type { XRef } from './context';
-import { buildChain, chainValue } from './geometry/dimension-chain';
+import { standardRegistry } from './algorithms/registry';
+import { buildChain, chainValue, chainLength } from './geometry/dimension-chain';
 import {
   appliesWhen,
   evaluateProperties,
@@ -32,7 +33,7 @@ import {
 
 export type { EvalContext, ScopeInstance, XRef } from './context';
 export type { Algorithm, AlgorithmRegistry, AlgoInput, AlgoOutput } from './algorithms/types';
-export { createRegistry, defaultRegistry } from './algorithms/registry';
+export { createRegistry, defaultRegistry, standardRegistry } from './algorithms/registry';
 export { WarningSink } from './warnings';
 
 export type TakeoffInput = {
@@ -129,6 +130,8 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const materials = new Map((args.materials ?? []).map((m) => [m.id, m]));
   const warnings: Warning[] = [];
   const trace: TraceNode[] = [];
+  const registry = args.algorithms ?? standardRegistry;
+  const algorithmOutputs = new Map<string, AlgoOutput>();
 
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
@@ -146,6 +149,36 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
       trace.push({ label: mm.material_id, detail: `skip · ${applies.skipReason}` });
       continue;
     }
+    if (mm.rule.qty_kind === 'algorithm') {
+      const cfg = mm.rule.algorithm_config;
+      const algo = cfg ? registry.get(cfg.algorithm) : undefined;
+      if (!algo) {
+        trace.push({ label: mm.material_id, detail: 'skip · algorithm not registered' });
+        continue;
+      }
+      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [] });
+      algorithmOutputs.set(mm.id, out);
+      const aqty = out.fields[algo.outputFields[0]] ?? 0;
+      if (aqty <= 0) {
+        trace.push({ label: mm.material_id, detail: 'skip · algorithm qty 0' });
+        continue;
+      }
+      if (!mat) {
+        warnings.push({ level: 'warning', source: 'validation', type: 'missing_sku', message: `material ${mm.material_id} not found`, affected_fields: [mm.id] });
+      }
+      lines.push({
+        sku: mat?.sku ?? mm.material_id,
+        material_visual: mat?.visual,
+        description: mat?.name ?? mm.material_id,
+        qty: aqty,
+        unit: mat?.unit ?? 'ea',
+        source_material_id: mm.material_id,
+        source_rule_id: mm.id,
+      });
+      trace.push({ label: mm.material_id, detail: `${aqty} × ${mat?.sku ?? mm.material_id} · ${algo.name}` });
+      continue;
+    }
+
     const q = resolveQuantity(mm.rule, propertyVals, derived, primitiveCount, chain);
     if (q.kind === 'skip') {
       trace.push({ label: mm.material_id, detail: `skip · ${q.reason}` });

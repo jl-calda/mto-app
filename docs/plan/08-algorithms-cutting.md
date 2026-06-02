@@ -1,6 +1,11 @@
 # Brief 08 — Algorithms + stock + cutting
 
-**Milestone:** v1.5 (items 14–20) · **Depends on:** 07 · **Status:** not started
+**Milestone:** v1.5 (items 14–20) · **Depends on:** 07 · **Status:** in progress
+
+> Algorithms implemented behind the registry: `pack_stock` (tight/spaced),
+> `place_supports` (greedy), `cut_from_stock` (FFD). The `algorithm` quantity kind is
+> wired — the guardrail's rail now packs into 4×6000mm pieces via `pack_stock`. Next:
+> stock/threshold/junction property archetypes + cut-demand aggregation → cutting plan.
 
 ## Goal
 Stock/threshold/junction archetypes fully live; `place_supports` (greedy), `pack_stock`
