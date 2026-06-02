@@ -87,7 +87,9 @@ capture the intent.
   ladder rewired from static to engine); CSV export; **take-off persistence** (debounced
   autosave via `saveTakeoffAction` → `Repository.saveTakeoff`, denormalized snapshot + MTO).
   (Criteria-driven-defaults *flash* deferred — pairs with editable-criteria/X-picker work.)
-- **Brief 03 browse** — Materials, Variants list+detail.
+- **Brief 03 Materials + Variants CRUD** ✅ — browse + create/edit/delete through the repo
+  (`save/deleteMaterial`, `save/deleteVariant` + Server Actions); material editor (cuttable +
+  stock_options) and variant common-attributes editor. (Variant version history → Brief 10.)
 - **Brief 04 Systems + authoring** ✅ — list (+ **New system**) + detail (+ **Edit** +
   AttachmentsEditor); the **4-step wizard** (`/systems/new`, `/systems/[id]/edit`):
   primitive · modifiers · variants+matrix+criteria · properties (7 archetypes), persisted via
@@ -101,14 +103,14 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 03** — materials/variants create/edit/delete **mutations** (browse screens exist;
-   add `saveMaterial`/`saveVariant` to the repo + authoring forms, mirroring the Brief 04 wizard).
-2. **Brief 05 finish** — the rule **X-picker UI** (make model rules editable: qty_kind, per-target
-   X from the `deriveRuleContext` xrefs, applies_when) + editable criteria → unlocks Brief 06's
-   criteria-driven-defaults flash.
-3. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
-4. **Brief 07** — full segmentation/spans/placement editors (engine + UI).
-5. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence),
+1. **Brief 05 finish** — the rule **X-picker UI** (make model rules editable: qty_kind, per-target
+   X from the `deriveRuleContext` xrefs, applies_when, add/remove model materials) + editable
+   criteria → unlocks Brief 06's criteria-driven-defaults flash. (`deriveRuleContext` + a live
+   preview already exist; add a `saveModel` repo mutation + Server Action.)
+2. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload), wired into the
+   material/variant/system editors (they currently have no visual picker).
+3. **Brief 07** — full segmentation/spans/placement editors (engine + UI).
+4. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence),
    greedy→ILP solver swap; then **Brief 11 (v3)**, **Brief 12** (testing/CI/deploy/PDF).
 
 ## How to verify
