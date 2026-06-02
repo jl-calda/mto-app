@@ -91,7 +91,7 @@ function inlineOne(
   const emitMaterial = (sam: SubAssemblyMaterial) => {
     const mat = deps.materials.get(sam.material_id);
     // sub-assembly materials see the HOST variant/criteria (they are inlined into it)
-    const applies = appliesWhen(sam.rule, ctx.variantName, ctx.criteria);
+    const applies = appliesWhen(sam.rule, ctx.variantName, ctx.criteria, ctx.modifiers);
     if (!applies.variant || !applies.criteria) {
       children.push({ label: sam.material_id, detail: `skip · ${applies.skipReason}` });
       return;

@@ -17,6 +17,7 @@ import type {
   CuttingPlan,
   DimensionChain,
   InventoryItem,
+  LengthInput,
   Material,
   Model,
   MtoLine,
@@ -37,7 +38,9 @@ import {
   evaluatePropertiesScoped,
   readPrimitive,
   resolveQuantity,
+  resolveSkuLookup,
   variantName,
+  type SkuContext,
 } from './evaluate';
 import { inlineSubAssemblyUses } from './emit';
 import {
@@ -132,18 +135,19 @@ function resolveModifierValues(system: System, model: Model, input: TakeoffInput
   return out;
 }
 
-function geometryFrom(chain: CanonicalGeometry['dimension_chain'], parts?: GeometryParts): CanonicalGeometry {
+function geometryFrom(chain: CanonicalGeometry['dimension_chain'], parts?: GeometryParts, opts?: { freeEnds?: number; isLoop?: boolean }): CanonicalGeometry {
   const measured = chain.steps[0]?.value ?? 0;
   const v = (r: ChainRole) => chainValue(chain, r);
+  const isLoop = opts?.isLoop ?? false;
   return {
     measured_range: [0, measured],
     effective_range: [0, v('adjusted')],
     installed_range: [0, v('constrained')],
     physical_range: [0, v('quantized')],
-    free_ends_count: 2,
-    end_roles: { start: 'free', end: 'free' },
+    free_ends_count: (opts?.freeEnds ?? 2) as 0 | 1 | 2,
+    end_roles: { start: isLoop ? 'junction_attached' : 'free', end: isLoop ? 'junction_attached' : 'free' },
     orientation: 'horizontal',
-    is_loop: false,
+    is_loop: isLoop,
     dimension_chain: chain,
     ...(parts && {
       segments: parts.segments,
@@ -238,6 +242,12 @@ function resolveModel(
   derived.junction_count = geometry.junctions.length;
   for (const j of geometry.junctions) derived[`junction_${j.type}`] = (derived[`junction_${j.type}`] ?? 0) + 1;
 
+  // free-end / loop derived counts (Brief examples: end terminations, foot/head details, turnbuckle)
+  const isLoop = system.primitive.kind === 'length' && typeof input.primitive_input === 'object' && (input.primitive_input as LengthInput | null)?.is_loop === true;
+  derived.is_loop = isLoop ? 1 : 0;
+  if (isLoop) { derived.free_ends_count = 0; derived.free_foot_count = 0; derived.free_head_count = 0; }
+  else { derived.free_foot_count = 1; derived.free_head_count = 1; }
+
   // variant×property gating (authored via the wizard matrix): a property with a
   // non-empty applies_to_variants only applies to those variants.
   const activeProperties = system.properties.filter(
@@ -251,6 +261,16 @@ function resolveModel(
   for (const p of system.properties) {
     propertyInputs[p.name] = (input.property_values?.[p.name] as Record<string, unknown> | undefined) ?? {};
   }
+
+  // context for SKU lookups (banded modifier / property input / variant attr / criterion)
+  const skuCtx: SkuContext = { modifiers: modifierValues, criteria: input.criteria_values ?? {}, variantAttrs: variant.attributes, propertyInputs, systemModifiers: system.modifiers };
+  const skuFor = (mm: { material_id: string; id: string; rule: Rule }, baseSku: string): string => {
+    if (!mm.rule.sku_lookup) return baseSku;
+    const r = resolveSkuLookup(mm.rule.sku_lookup, model.sku_lookups ?? [], skuCtx);
+    if (r.sku) return r.sku;
+    warnings.push({ level: 'warning', source: 'validation', type: 'missing_sku', message: `${mm.material_id}: no SKU in '${mm.rule.sku_lookup.table}' for keys [${r.keys.join(', ')}]`, affected_fields: [mm.id] });
+    return baseSku;
+  };
 
   // determine which attachments are active, then gather the suppressions that act
   // on THIS model (member 'this') BEFORE resolving its own materials.
@@ -269,7 +289,7 @@ function resolveModel(
   // ── model materials ──
   for (const mm of model.materials) {
     const mat = deps.materials.get(mm.material_id);
-    const applies = appliesWhen(mm.rule, vname, input.criteria_values ?? {});
+    const applies = appliesWhen(mm.rule, vname, input.criteria_values ?? {}, modifierValues);
     if (!applies.variant || !applies.criteria) {
       trace.push({ label: mm.material_id, detail: `skip · ${applies.skipReason}` });
       continue;
@@ -282,7 +302,13 @@ function resolveModel(
         trace.push({ label: mm.material_id, detail: 'skip · algorithm not registered' });
         continue;
       }
-      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [], placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules });
+      const gridKey = Object.keys(modifierValues).find((k) => /support_grid|grid/i.test(k));
+      const out = algo.run({
+        length: chainLength(chain),
+        stock_options: mat?.stock_options ?? [],
+        placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules,
+        support_grid: gridKey ? modifierValues[gridKey] : undefined,
+      });
       algorithmOutputs.set(mm.id, out);
       algoOutByName.set(cfg!.algorithm, out);
       const aqty = out.fields[algo.outputFields[0]] ?? 0;
@@ -293,8 +319,9 @@ function resolveModel(
       if (!mat) {
         warnings.push({ level: 'warning', source: 'validation', type: 'missing_sku', message: `material ${mm.material_id} not found`, affected_fields: [mm.id] });
       }
+      const algoSku = skuFor(mm, mat?.sku ?? mm.material_id);
       lines.push({
-        sku: mat?.sku ?? mm.material_id,
+        sku: algoSku,
         material_visual: mat?.visual,
         description: mat?.name ?? mm.material_id,
         qty: aqty,
@@ -303,7 +330,7 @@ function resolveModel(
         source_rule_id: mm.id,
         source_attachment: attachmentTag,
       });
-      trace.push({ label: mm.material_id, detail: `${aqty} × ${mat?.sku ?? mm.material_id} · ${algo.name}` });
+      trace.push({ label: mm.material_id, detail: `${aqty} × ${algoSku} · ${algo.name}` });
       continue;
     }
 
@@ -336,8 +363,9 @@ function resolveModel(
     if (!mat) {
       warnings.push({ level: 'warning', source: 'validation', type: 'missing_sku', message: `material ${mm.material_id} not found`, affected_fields: [mm.id] });
     }
+    const lineSku = skuFor(mm, mat?.sku ?? mm.material_id);
     lines.push({
-      sku: mat?.sku ?? mm.material_id,
+      sku: lineSku,
       material_visual: mat?.visual,
       description: mat?.name ?? mm.material_id,
       qty,
@@ -346,7 +374,7 @@ function resolveModel(
       source_rule_id: mm.id,
       source_attachment: attachmentTag,
     });
-    trace.push({ label: mm.material_id, detail: `${qty} × ${mat?.sku ?? mm.material_id}${sup ? ` (−1 @connection)` : ''}` });
+    trace.push({ label: mm.material_id, detail: `${qty} × ${lineSku}${sup ? ` (−1 @connection)` : ''}` });
   }
 
   const hostCtx: HostEvalContext = {
@@ -525,7 +553,7 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const mto = [...bySku.values()];
 
   return {
-    geometry: geometryFrom(root.chain, root.geometry),
+    geometry: geometryFrom(root.chain, root.geometry, { freeEnds: root.derived.free_ends_count, isLoop: root.derived.is_loop === 1 }),
     chain: root.chain,
     mto,
     cuttingPlans,

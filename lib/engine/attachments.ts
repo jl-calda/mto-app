@@ -200,7 +200,7 @@ export function resolveConnectionMaterials(
   const rules = (model.connection_materials ?? []).filter((c) => c.attachment_id === attachmentId);
   for (const c of rules) {
     const mat = deps.materials.get(c.material_id);
-    const applies = appliesWhen(c.rule, hostCtx.variantName, hostCtx.criteria);
+    const applies = appliesWhen(c.rule, hostCtx.variantName, hostCtx.criteria, hostCtx.modifiers);
     if (!applies.variant || !applies.criteria) {
       trace.push({ label: c.material_id, detail: `skip · ${applies.skipReason}` });
       continue;
