@@ -1,13 +1,15 @@
 # Brief 06 — Projects + take-off + CSV export
 
-**Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** in progress
+**Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** ✅ done
+(DoD met; the criteria-driven-defaults *flash* nicety is deferred — no seed data exercises it yet)
 
 > Live & engine-computed: Projects list (`/`) + project detail; all three v1
 > take-offs — anchors (count), guardrail (length, pack_stock rail), **and the ladder
 > (height) rewired from static to the engine** (flight auto-split, threshold cage
 > hoops, stiles pack_stock, derived rest-platforms). Shared `PrimitiveTakeoff`
-> component, with **CSV export** (`lib/export/csv.ts` + download button). Next:
-> take-off persistence (save back to the repo with the variant snapshot).
+> component, with **CSV export** (`lib/export/csv.ts` + download button) and
+> **take-off persistence** (debounced autosave via a Server Action through the repo,
+> denormalized `VariantSnapshot` + computed MTO) and **project review/stale badges**.
 
 ## Owns
 `index.html` (projects list) + `project.html` (project detail); generic length/count take-offs;
@@ -23,13 +25,28 @@ persistence with snapshots. PDF export → Brief 12.
 - `lib/export/csv.ts`; take-off persistence (denormalized `VariantSnapshot`).
 
 ## Tasks
-- [ ] Input state → `resolveTakeoff` → chain + property cards + MTO + warnings, recompute <100ms.
-- [ ] Criteria-driven defaults effect (flash on auto-filled fields).
-- [ ] Save take-off with `VariantSnapshot`; debounced autosave.
-- [ ] CSV from `result.mto`.
-- [ ] Ladder screen no longer uses hard-coded data.
+- [x] Input state → `resolveTakeoff` → chain + property cards + MTO + warnings, recompute <100ms.
+- [ ] Criteria-driven defaults effect (flash on auto-filled fields). *(deferred — criteria are
+      read-only in the take-off and no seed model carries `criteria_driven_defaults`; pairs with
+      the editable-criteria/X-picker authoring work.)*
+- [x] Save take-off with `VariantSnapshot`; debounced autosave.
+      (`saveTakeoffAction` → `Repository.saveTakeoff`; `components/takeoff/persistence.tsx`.)
+- [x] CSV from `result.mto`.
+- [x] Ladder screen no longer uses hard-coded data.
 
 ## Definition of Done
-- [ ] Ladder, guardrail, anchors take-offs are live and persist with snapshots.
-- [ ] Project detail lists take-offs + stale/"review needed" badges.
-- [ ] CSV downloads; ladder is engine-driven.
+- [x] Ladder, guardrail, anchors take-offs are live and persist with snapshots.
+- [x] Project detail lists take-offs + stale/"review needed" badges.
+- [x] CSV downloads; ladder is engine-driven.
+
+## Status notes (live)
+- `Repository.saveTakeoff(projectId, takeoff)` added to the interface + memory (in-process upsert)
+  and Supabase (payload + relational columns) repos. Server Action `app/takeoff/actions.ts`
+  revalidates `/projects/[id]` and `/`.
+- Persistence is shared by both take-off components via `useTakeoffPersistence` (debounced 800ms
+  autosave + manual Save) and `SaveStatus`. Saved payload = inputs + `VariantSnapshot` + attachments
+  + `computed_geometry` + `mto` + `warnings`.
+- Badges: stale-snapshot (`variant vN→vM` when a pinned library variant has advanced — demoed via
+  `var-ss316` @ v2 vs the guardrail take-off pinned at v1), `N review` (stored warning/error),
+  `✓ N lines` vs `draft`.
+- Verified: build + typecheck green; `saveTakeoff` round-trips; all routes 200; badges render.
