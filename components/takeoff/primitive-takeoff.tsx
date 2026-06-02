@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
+import { mtoToPdf } from '@/lib/export/pdf';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
@@ -156,15 +157,16 @@ export function PrimitiveTakeoff({
   const sig = JSON.stringify({ variantIdx, primitiveInput, attState, mto: result.mto.length, items });
   const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
-  function downloadCsv() {
-    const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
+  function download(blob: Blob, ext: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${title.replace(/[^\w-]+/g, '_')}.csv`;
+    a.download = `${title.replace(/[^\w-]+/g, '_')}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   }
+  const downloadCsv = () => download(new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' }), 'csv');
+  const downloadPdf = () => download(new Blob([mtoToPdf(result.mto, title) as BlobPart], { type: 'application/pdf' }), 'pdf');
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -492,6 +494,7 @@ export function PrimitiveTakeoff({
                   <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
                 )}
                 <button className="btn sm" onClick={downloadCsv}>CSV</button>
+                <button className="btn sm" onClick={downloadPdf}>PDF</button>
               </div>
             </div>
             {result.mto.map((l, i) => (
