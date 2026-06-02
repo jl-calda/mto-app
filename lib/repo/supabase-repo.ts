@@ -49,5 +49,16 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     listInventory: () => listPayloads<InventoryItem>('inventory_item'),
     listTakeoffs: (projectId) => listPayloadsWhere<Takeoff>('takeoff', 'project_id', projectId),
     getTakeoff: (id) => getPayload<Takeoff>('takeoff', id),
+    async saveTakeoff(projectId, takeoff) {
+      const { error } = await db.from('takeoff').upsert({
+        id: takeoff.id,
+        project_id: projectId,
+        system_id: takeoff.system_id,
+        model_id: takeoff.model_id,
+        payload: takeoff,
+      });
+      if (error) throw new Error(`takeoff#${takeoff.id}: ${error.message}`);
+      return takeoff;
+    },
   };
 }

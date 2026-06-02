@@ -55,5 +55,14 @@ export function createMemoryRepo(): Repository {
     async getTakeoff(id) {
       return allTakeoffs().find((t) => t.id === id) ?? null;
     },
+    async saveTakeoff(projectId, takeoff) {
+      // Mutates the in-memory seed — persists for the life of the server process.
+      const project = seed.projects.find((p) => p.id === projectId);
+      if (!project) throw new Error(`project ${projectId} not found`);
+      const i = project.takeoffs.findIndex((t) => t.id === takeoff.id);
+      if (i >= 0) project.takeoffs[i] = takeoff;
+      else project.takeoffs.push(takeoff);
+      return takeoff;
+    },
   };
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Shell, PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
 import { getRepo } from '@/lib/repo';
+import type { Takeoff, Variant } from '@/lib/types';
 
 function takeoffHref(kind?: string): string {
   return kind === 'height'
@@ -14,6 +15,28 @@ function takeoffHref(kind?: string): string {
         : '#';
 }
 
+type Badge = { label: string; tone: 'ok' | 'warn' | 'muted' };
+const TONE: Record<Badge['tone'], { color: string; bg: string }> = {
+  ok: { color: 'var(--ok)', bg: 'var(--ok-soft)' },
+  warn: { color: 'var(--warn)', bg: 'var(--warn-soft)' },
+  muted: { color: 'var(--ink-3)', bg: 'var(--bg-2)' },
+};
+
+/** Stale-snapshot / review-needed / saved badges for a take-off row. */
+function badgesFor(t: Takeoff, variantById: Map<string, Variant>): Badge[] {
+  const out: Badge[] = [];
+  const ref = t.variant_choice?.source_ref;
+  if (ref?.kind === 'library') {
+    const cur = variantById.get(ref.variant_id)?.current_version;
+    const snap = t.variant_choice.snapshot_version;
+    if (cur != null && snap != null && snap < cur) out.push({ label: `variant v${snap}→v${cur}`, tone: 'warn' });
+  }
+  const review = (t.warnings ?? []).filter((w) => w.level === 'warning' || w.level === 'error').length;
+  if (review) out.push({ label: `${review} review`, tone: 'warn' });
+  out.push(t.mto && t.mto.length ? { label: `✓ ${t.mto.length} lines`, tone: 'ok' } : { label: 'draft', tone: 'muted' });
+  return out;
+}
+
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const repo = getRepo();
@@ -22,9 +45,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const systems = await repo.listSystems();
   const models = await repo.listModels();
+  const variants = await repo.listVariants();
   const sysById = new Map(systems.map((s) => [s.id, s]));
   const modelById = new Map(models.map((m) => [m.id, m]));
+  const variantById = new Map(variants.map((v) => [v.id, v]));
   const usedSystemIds = [...new Set(project.takeoffs.map((t) => t.system_id))];
+  const reviewCount = project.takeoffs.filter((t) => badgesFor(t, variantById).some((b) => b.tone === 'warn')).length;
 
   return (
     <Shell navActive="projects" crumbs={[{ label: 'Projects', href: '/' }, { label: project.name }]}>
@@ -43,6 +69,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <div className="flex border-l border-line">
             <Stat k="take-offs" v={project.takeoffs.length} />
             <Stat k="systems used" v={usedSystemIds.length} />
+            {reviewCount > 0 && <Stat k="review" v={reviewCount} highlight="warn" />}
           </div>
         </div>
 
@@ -69,6 +96,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                     <div className="mono truncate text-[10px] text-ink-3">
                       {sys?.name} › {mdl?.name}
                     </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {badgesFor(t, variantById).map((b, i) => (
+                      <span key={i} className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: TONE[b.tone].color, background: TONE[b.tone].bg }}>{b.label}</span>
+                    ))}
                   </div>
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: 'var(--ink-4)' }}>
                     <path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />

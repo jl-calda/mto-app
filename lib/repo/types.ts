@@ -36,4 +36,6 @@ export interface Repository {
 
   listTakeoffs(projectId?: string): Promise<Takeoff[]>;
   getTakeoff(id: string): Promise<Takeoff | null>;
+  /** Upsert a take-off into a project (denormalized VariantSnapshot — a correctness law). */
+  saveTakeoff(projectId: string, takeoff: Takeoff): Promise<Takeoff>;
 }

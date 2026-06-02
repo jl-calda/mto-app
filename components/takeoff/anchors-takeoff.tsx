@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { resolveTakeoff } from '@/lib/engine';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
-import type { Material, Model, System, VariantSnapshot } from '@/lib/types';
+import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
+import type { Material, Model, System, Takeoff, VariantSnapshot } from '@/lib/types';
 
 export function AnchorsTakeoff({
   system,
@@ -13,6 +14,7 @@ export function AnchorsTakeoff({
   variant,
   criteria,
   title,
+  persist,
 }: {
   system: System;
   model: Model;
@@ -20,6 +22,7 @@ export function AnchorsTakeoff({
   variant: VariantSnapshot;
   criteria: Record<string, string>;
   title: string;
+  persist?: PersistTarget;
 }) {
   const [count, setCount] = useState(12);
 
@@ -35,6 +38,22 @@ export function AnchorsTakeoff({
     [system, model, materials, variant, criteria, count],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
+
+  const buildTakeoff = (): Takeoff => ({
+    id: persist?.takeoffId ?? 'tko-draft',
+    name: title,
+    system_id: system.id,
+    model_id: model.id,
+    variant_choice: variant,
+    criteria_values: criteria,
+    modifier_values: {},
+    primitive_input: count,
+    property_values: {},
+    computed_geometry: result.geometry,
+    mto: result.mto,
+    warnings: result.warnings,
+  });
+  const save = useTakeoffPersistence(persist, buildTakeoff, JSON.stringify({ count, items }));
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -97,7 +116,11 @@ export function AnchorsTakeoff({
                 <h2 className="m-0 text-[14px] font-semibold">Live MTO</h2>
                 <div className="mono text-[11px] text-ink-3">{model.name}</div>
               </div>
-              <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+              {persist ? (
+                <SaveStatus state={save.state} savedAt={save.savedAt} onSave={() => void save.saveNow()} />
+              ) : (
+                <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+              )}
             </div>
             {result.mto.map((l, i) => (
               <div key={i} className="flex items-center gap-2 border-b border-line px-3.5 py-2 last:border-b-0">

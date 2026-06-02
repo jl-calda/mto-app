@@ -54,6 +54,7 @@ export default async function LadderTakeoffPage() {
         iconName="ladder"
         subAssemblies={subAssemblies}
         attachableSystems={attachableSystems}
+        persist={{ takeoffId: 'tko-ladder', projectId: 'prj-westfield' }}
       />
     </Shell>
   );

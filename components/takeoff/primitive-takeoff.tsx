@@ -5,7 +5,8 @@ import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
-import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
+import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
+import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -44,6 +45,7 @@ export function PrimitiveTakeoff({
   iconName = 'post',
   subAssemblies = [],
   attachableSystems = [],
+  persist,
 }: {
   system: System;
   model: Model;
@@ -56,6 +58,7 @@ export function PrimitiveTakeoff({
   iconName?: string;
   subAssemblies?: SubAssembly[];
   attachableSystems?: System[];
+  persist?: PersistTarget;
 }) {
   const rows = system.variants.rows;
   const [variantIdx, setVariantIdx] = useState(initialVariant);
@@ -107,6 +110,25 @@ export function PrimitiveTakeoff({
     if (l.source_sub_assembly) return { text: `⊂ ${saLabel.get(l.source_sub_assembly) ?? 'sub-assembly'}`, color: 'var(--accent)', bg: 'var(--accent-soft)' };
     return null;
   };
+
+  // persistence — save the current inputs + denormalized snapshot + computed MTO
+  const buildTakeoff = (): Takeoff => ({
+    id: persist?.takeoffId ?? 'tko-draft',
+    name: title,
+    system_id: system.id,
+    model_id: model.id,
+    variant_choice: variant,
+    criteria_values: criteria,
+    modifier_values: {},
+    primitive_input: primitive === 'height' ? value : { mode: 'single', total: value },
+    property_values: {},
+    attachments: attachmentInstances,
+    computed_geometry: result.geometry,
+    mto: result.mto,
+    warnings: result.warnings,
+  });
+  const sig = JSON.stringify({ variantIdx, value, attState, mto: result.mto.length, items });
+  const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
   function downloadCsv() {
     const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
@@ -362,8 +384,12 @@ export function PrimitiveTakeoff({
                 <div className="mono text-[11px] text-ink-3">{model.name}</div>
               </div>
               <div className="flex items-center gap-2">
+                {persist ? (
+                  <SaveStatus state={save.state} savedAt={save.savedAt} onSave={() => void save.saveNow()} />
+                ) : (
+                  <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+                )}
                 <button className="btn sm" onClick={downloadCsv}>CSV</button>
-                <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
               </div>
             </div>
             {result.mto.map((l, i) => (
