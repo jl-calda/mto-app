@@ -1,0 +1,303 @@
+/* MTO — design tokens
+   CAD / engineering feel: warm paper bg, IBM Plex, dense vertical rhythm,
+   sharp 1px borders, restrained color, mono for all numerics.
+   Ported verbatim from the design bundle's tokens.css.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+:root {
+  /* --- type --- */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+
+  --fs-9:  9px;
+  --fs-10: 10px;
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-32: 32px;
+  --fs-40: 40px;
+
+  /* --- color: surfaces --- */
+  --bg:           #F4F2EC;  /* warm paper */
+  --bg-2:         #ECE9E0;  /* recessed */
+  --panel:        #FFFFFF;
+  --panel-2:      #FAF8F2;  /* tinted panel */
+  --panel-hover:  #F8F6EE;
+  --selected:     #EBF1FB;  /* row selected (blueprint blue tint) */
+  --selected-2:   #DDE7F8;
+
+  /* --- color: ink --- */
+  --ink:    #14130E;
+  --ink-2:  #4A4842;
+  --ink-3:  #807D74;
+  --ink-4:  #B0AC9F;
+  --ink-5:  #D6D2C6;
+
+  /* --- color: borders --- */
+  --line:        #E0DCD0;  /* hairline */
+  --line-2:      #C7C2B2;  /* defined */
+  --line-strong: #1F1E18;
+
+  /* --- color: semantic --- */
+  --accent:        #1F5BC4;  /* blueprint blue — interactive primary */
+  --accent-fg:     #FFFFFF;
+  --accent-soft:   #DCE6F7;
+  --accent-line:   #6F9BE0;
+
+  --annotation:    #C44A20;  /* engineering-drawing red — emphasized numerics, errors */
+  --annotation-soft: #F5DDD0;
+
+  --ok:        #2E7A3A;
+  --ok-soft:   #DCEBDB;
+  --warn:      #A77512;
+  --warn-soft: #F5E5C0;
+  --err:       #B83227;
+  --err-soft:  #F2D6D0;
+
+  /* --- primitive accent colors --- */
+  --prim-length:    #2755A8;  /* steel blue */
+  --prim-seglength: #1C6E73;  /* teal */
+  --prim-height:    #8E5A14;  /* bronze */
+  --prim-count:     #663AAB;  /* purple */
+
+  /* --- spacing (4px base) --- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* --- shape --- */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+
+  /* --- shadows --- */
+  --shadow-pop:    0 1px 0 rgba(20,19,14,.04), 0 2px 6px rgba(20,19,14,.08), 0 8px 24px rgba(20,19,14,.10);
+  --shadow-card:   0 1px 0 rgba(20,19,14,.04);
+  --shadow-sticky: 0 1px 0 rgba(20,19,14,.06), 0 8px 16px -8px rgba(20,19,14,.10);
+
+  /* heights */
+  --h-topbar: 44px;
+  --h-row:    32px;
+  --h-input:  28px;
+  --h-input-lg: 32px;
+}
+
+/* --- base --- */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+button { font-family: inherit; }
+
+/* numerical superpowers */
+.mono, .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.tnum { font-variant-numeric: tabular-nums; }
+.uc {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--fs-10);
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+/* --- buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: var(--h-input-lg);
+  padding: 0 12px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--panel-hover); }
+.btn.sm { height: 24px; padding: 0 8px; font-size: var(--fs-11); }
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.btn.primary:hover { background: #1851B5; }
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.btn.ghost:hover { background: var(--bg-2); color: var(--ink); }
+.btn.danger { color: var(--err); }
+
+/* --- inputs --- */
+.input, input[type=text], input[type=number] {
+  height: var(--h-input);
+  padding: 0 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.input:focus, input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.input.text { font-family: var(--font-sans); }
+
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path fill='%234A4842' d='M2 4l3 3 3-3z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+
+/* --- panels / cards --- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-card);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+  border-top-left-radius: var(--r-3);
+  border-top-right-radius: var(--r-3);
+}
+.panel-head .title {
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.panel-body { padding: var(--s-3); }
+
+/* --- chip / badge --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--bg-2);
+  color: var(--ink-2);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.chip.dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+.chip.length    { color: var(--prim-length);    background: #E6ECF7; }
+.chip.seglength { color: var(--prim-seglength); background: #DCEAEB; }
+.chip.height    { color: var(--prim-height);    background: #F0E6D2; }
+.chip.count     { color: var(--prim-count);     background: #E8DEF5; }
+.chip.outlined { background: transparent; border-color: currentColor; }
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-1);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-10);
+  font-weight: 500;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+
+/* --- key / value (engineering label : monospace value) --- */
+.kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.kv .k {
+  font-size: var(--fs-11);
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kv .v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- selection / focus rows --- */
+.row {
+  display: flex;
+  align-items: center;
+  height: var(--h-row);
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-12);
+}
+.row:hover { background: var(--panel-hover); }
+.row.selected { background: var(--selected); }
+
+/* --- scrollbar (slim) --- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--ink-5);
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* take-off ladder · derived-value pulse (from takeoff-ladder.html <style>) */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* anchor reset so internal links don't inherit purple/blue underline */
+a { color: inherit; }
