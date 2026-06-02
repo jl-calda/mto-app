@@ -92,6 +92,10 @@ capture the intent.
 - **Brief 03 Materials + Variants CRUD** ✅ — browse + create/edit/delete through the repo
   (`save/deleteMaterial`, `save/deleteVariant` + Server Actions); material editor (cuttable +
   stock_options) and variant common-attributes editor. (Variant version history → Brief 10.)
+- **Brief 02 Visual identifier editor** ✅ — `components/visual-editor.tsx` (none/emoji/icon/upload
+  + clear; click/drop/paste with optimistic objectURL → uploaded URL → rollback); `/api/visuals`
+  (Supabase Storage or data-URL fallback); wired into the material + variant editors. (Wiring into
+  the system-wizard/model-editor headers is a small follow-up.)
 - **Brief 04 Systems + authoring** ✅ — list (+ **New system**) + detail (+ **Edit** +
   AttachmentsEditor); the **4-step wizard** (`/systems/new`, `/systems/[id]/edit`):
   primitive · modifiers · variants+matrix+criteria · properties (7 archetypes), persisted via
@@ -105,14 +109,16 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload), wired into the
-   material/variant/system/model editors (they have no visual picker yet — `Visual` is display-only).
-2. **Brief 07** — full segmentation/spans/placement editors (engine + UI): multi-segment runs,
-   junctions, spans, `place_supports` placement-rules editor.
-3. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
+1. **Brief 07** — full segmentation/spans/placement (engine + UI): multi-segment length runs,
+   junctions (corner/splice), `SpanDeclaration` resolution + per_span properties, and the
+   `place_supports` placement-rules editor. Engine has the hooks (scopes, spans types) — wire them.
+2. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
    take-off criteria-driven-defaults flash), greedy→ILP solver swap.
-4. **Brief 11 (v3)** scale/collab, then **Brief 12** (testing/CI/deploy/RLS/PDF/perf — incl. the
-   deferred golden engine unit tests).
+3. **Brief 11 (v3)** scale/collab (auth UI, realtime, inventory/offcuts, area take-off).
+4. **Brief 12** — testing/CI/deploy/RLS/PDF/perf (incl. the deferred golden engine unit tests).
+
+v1 surface is essentially complete: **8 of 12 briefs done** (01, 02, 03, 04, 05, 06, 09 + most of
+07/08). Briefs 07/10/11/12 are the remaining depth/scale/ops work.
 
 ## How to verify
 ```
