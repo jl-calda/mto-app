@@ -2,9 +2,10 @@
 
 **Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** in progress
 
-> Anchors (count) take-off is live at `/takeoff/anchors` — engine-computed MTO that
-> recomputes live as the count changes. Next: guardrail/ladder rewired to the engine,
-> projects list + project detail, CSV export.
+> Live & engine-computed: Projects list (`/`) + project detail (`/projects/[id]`);
+> anchors (count) take-off; guardrail (length) take-off with the dimension chain +
+> spacing→uprights. Next: rewire the ladder (height) screen to the engine, then CSV
+> export + take-off persistence with snapshots.
 
 ## Owns
 `index.html` (projects list) + `project.html` (project detail); generic length/count take-offs;
