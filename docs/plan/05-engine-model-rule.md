@@ -1,6 +1,13 @@
 # Brief 05 — Engine core + Model & rule authoring  ⟵ make-or-break, critical path
 
-**Milestone:** v1 (items 6, 7) · **Depends on:** 04 · **Status:** not started
+**Milestone:** v1 (items 6, 7) · **Depends on:** 04 · **Status:** in progress
+
+> Engine core implemented & verified (`lib/engine`): generic dimension chain
+> (length/height/count), property archetypes (spacing/count/rate/threshold),
+> the 5 quantity patterns, `applies_when` (variant ∧ criteria), SKU = referenced
+> material, consolidation, `deriveRuleContext`, and `evaluateRuleAgainstSample`
+> — all pure, no per-system branching. Proven via the live anchors take-off.
+> Next: model-edit + material-rule editor UIs (live-eval pane = the same evaluator).
 
 ## Goal
 The **working single-primitive interpreter** (length + count; no segmentation/algorithms/

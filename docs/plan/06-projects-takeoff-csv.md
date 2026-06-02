@@ -1,6 +1,10 @@
 # Brief 06 — Projects + take-off + CSV export
 
-**Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** not started
+**Milestone:** v1 (items 8, 9) · **Depends on:** 05 · **Status:** in progress
+
+> Anchors (count) take-off is live at `/takeoff/anchors` — engine-computed MTO that
+> recomputes live as the count changes. Next: guardrail/ladder rewired to the engine,
+> projects list + project detail, CSV export.
 
 ## Owns
 `index.html` (projects list) + `project.html` (project detail); generic length/count take-offs;
