@@ -183,6 +183,8 @@ const systems: System[] = [
         materials: [
           { id: 'mm-upright', material_id: 'mat-upright', rule: { qty_kind: 'per', per: { kind: 'property', name: 'intermediate' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-railtop', material_id: 'mat-rail-top', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
+          // per_junction rule: a corner bracket per corner (0 for single-segment runs)
+          { id: 'mm-corner', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'junction_corner' }, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],

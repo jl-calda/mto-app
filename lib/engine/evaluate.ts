@@ -6,9 +6,11 @@ import type {
   DimensionChain,
   PerTarget,
   PropertyInstance,
+  PropertyScope,
   Rule,
   VariantSnapshot,
 } from '@/lib/types';
+import type { GeometryParts } from './geometry/segmentation';
 import { chainLength } from './geometry/dimension-chain';
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
@@ -46,8 +48,35 @@ export function appliesWhen(
   return { variant: variantOk, criteria: criteriaOk, skipReason };
 }
 
-/** Compute a numeric value per property by archetype (counts for spacing/count/
- *  threshold; a measure for rate). */
+type Inp = (name: string) => number;
+function makeInp(p: PropertyInstance, propertyValues: Record<string, unknown>): Inp {
+  const inputs = (propertyValues[p.name] as Record<string, unknown> | undefined) ?? {};
+  return (name) => (inputs[name] != null ? num(inputs[name]) : num(p.inputs.find((i) => i.name === name)?.default));
+}
+
+/** One archetype's numeric contribution for a length L (counts for spacing/threshold;
+ *  a measure for rate; the raw count otherwise). */
+function archetypeValue(p: PropertyInstance, L: number, inp: Inp): number {
+  switch (p.archetype) {
+    case 'spacing': {
+      const spacing = inp('spacing') || 1;
+      return Math.ceil(L / spacing) + 1; // + endpoints
+    }
+    case 'rate':
+      return (L / 1000) * inp('rate');
+    case 'count':
+      return inp('count');
+    case 'threshold': {
+      const threshold = inp('threshold');
+      const spacing = inp('spacing') || inp('hoop_spacing') || 1;
+      return L >= threshold && spacing > 0 ? Math.ceil((L - threshold) / spacing) : 0;
+    }
+    default:
+      return 0; // stock / variant / junction → later briefs
+  }
+}
+
+/** Single-chain property evaluation (used by the live-eval pane). */
 export function evaluateProperties(
   properties: PropertyInstance[],
   chain: DimensionChain,
@@ -55,33 +84,36 @@ export function evaluateProperties(
 ): Record<string, number> {
   const L = chainLength(chain);
   const out: Record<string, number> = {};
+  for (const p of properties) out[p.name] = archetypeValue(p, L, makeInp(p, propertyValues));
+  return out;
+}
+
+/** The length(s) a property's scope evaluates over. Single-segment runs reduce to
+ *  the run length, so existing take-offs are unchanged; segmented runs evaluate
+ *  per segment and sum. */
+function lengthsForScope(scope: PropertyScope, geo: GeometryParts, runLength: number): number[] {
+  if (scope === 'per_segment') return geo.segments.length ? geo.segments.map((s) => chainLength(s.dimension_chain)) : [runLength];
+  if (typeof scope === 'object' && scope.kind === 'per_span') {
+    const span = geo.spans.find((sp) => sp.name === scope.span_name);
+    return span ? [span.length] : [runLength];
+  }
+  if (scope === 'per_mount_surface') return geo.mount_surfaces.length ? geo.mount_surfaces.map((m) => m.span_range[1] - m.span_range[0]) : [runLength];
+  return [runLength]; // set_level / per_junction / default
+}
+
+/** Scope-aware property evaluation over the resolved geometry. */
+export function evaluatePropertiesScoped(
+  properties: PropertyInstance[],
+  geo: GeometryParts,
+  runChain: DimensionChain,
+  propertyValues: Record<string, unknown>,
+): Record<string, number> {
+  const runLength = chainLength(runChain);
+  const out: Record<string, number> = {};
   for (const p of properties) {
-    const inputs = (propertyValues[p.name] as Record<string, unknown> | undefined) ?? {};
-    const inp = (name: string): number => {
-      if (inputs[name] != null) return num(inputs[name]);
-      return num(p.inputs.find((i) => i.name === name)?.default);
-    };
-    switch (p.archetype) {
-      case 'spacing': {
-        const spacing = inp('spacing') || 1;
-        out[p.name] = Math.ceil(L / spacing) + 1; // + endpoints
-        break;
-      }
-      case 'rate':
-        out[p.name] = (L / 1000) * inp('rate');
-        break;
-      case 'count':
-        out[p.name] = inp('count');
-        break;
-      case 'threshold': {
-        const threshold = inp('threshold');
-        const spacing = inp('spacing') || inp('hoop_spacing') || 1;
-        out[p.name] = L >= threshold && spacing > 0 ? Math.ceil((L - threshold) / spacing) : 0;
-        break;
-      }
-      default:
-        out[p.name] = 0; // stock / variant / junction → later briefs
-    }
+    const inp = makeInp(p, propertyValues);
+    const lengths = lengthsForScope(p.scope, geo, runLength);
+    out[p.name] = lengths.reduce((s, L) => s + archetypeValue(p, L, inp), 0);
   }
   return out;
 }
