@@ -11,6 +11,7 @@ import { Step2Modifiers } from './Step2Modifiers';
 import { Step3Variants } from './Step3Variants';
 import { PropertiesEditor } from './PropertiesEditor';
 import { Card } from './parts';
+import { VisualEditor } from '@/components/visual-editor';
 
 const STEPS = ['Primitive', 'Modifiers', 'Variants & criteria', 'Properties'];
 
@@ -62,9 +63,12 @@ export function SystemWizard({ initial, isNew }: { initial: System; isNew?: bool
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       {/* header */}
       <div className="flex items-end justify-between gap-4 border-b border-line pb-3.5">
-        <div className="min-w-0 flex-1">
-          <input className="input text w-full max-w-[480px] text-[18px] font-semibold" style={{ height: 'auto', padding: '4px 8px' }} value={system.name} onChange={(e) => setSystem((s) => ({ ...s, name: e.target.value }))} placeholder="System name" />
-          <input className="input text mt-1.5 w-full max-w-[480px]" value={system.description ?? ''} onChange={(e) => setSystem((s) => ({ ...s, description: e.target.value }))} placeholder="Description (optional)" />
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="w-[300px] shrink-0"><VisualEditor value={system.visual} name={system.name} onChange={(v) => setSystem((s) => ({ ...s, visual: v }))} /></div>
+          <div className="min-w-0 flex-1">
+            <input className="input text w-full max-w-[480px] text-[18px] font-semibold" style={{ height: 'auto', padding: '4px 8px' }} value={system.name} onChange={(e) => setSystem((s) => ({ ...s, name: e.target.value }))} placeholder="System name" />
+            <input className="input text mt-1.5 w-full max-w-[480px]" value={system.description ?? ''} onChange={(e) => setSystem((s) => ({ ...s, description: e.target.value }))} placeholder="Description (optional)" />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}

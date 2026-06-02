@@ -36,6 +36,13 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
   return {
     listProjects: () => listPayloads<Project>('project'),
     getProject: (id) => getPayload<Project>('project', id),
+    async saveProject(project) {
+      const { error } = await db.from('project').upsert({
+        id: project.id, name: project.name, client: project.client, location: project.location ?? null, payload: project,
+      });
+      if (error) throw new Error(`project#${project.id}: ${error.message}`);
+      return project;
+    },
     listSystems: () => listPayloads<System>('system'),
     getSystem: (id) => getPayload<System>('system', id),
     async saveSystem(system) {

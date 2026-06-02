@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { deriveRuleContext, evaluateRuleAgainstSample } from '@/lib/engine';
 import { saveModelAction } from '@/app/models/actions';
 import { Visual } from '@/components/visual';
+import { VisualEditor } from '@/components/visual-editor';
 import { Field, NumberInput, Select, TextInput } from '@/components/system-wizard/parts';
 import type { AlgorithmName, Material, Model, ModelMaterial, PerTarget, Rule, System, SystemVariantRef } from '@/lib/types';
 
@@ -56,7 +57,7 @@ function defaultPrimitive(system: System): number {
   return system.primitive.kind === 'height' ? 9450 : system.primitive.kind === 'count' ? 12 : 24000;
 }
 
-export function ModelEditor({ system, model: initialModel, materials }: { system: System; model: Model; materials: Material[] }) {
+export function ModelEditor({ system, model: initialModel, materials, isNew = false }: { system: System; model: Model; materials: Material[]; isNew?: boolean }) {
   const router = useRouter();
   const matById = useMemo(() => new Map(materials.map((m) => [m.id, m])), [materials]);
   const ctx = useMemo(() => deriveRuleContext(system), [system]);
@@ -135,8 +136,11 @@ export function ModelEditor({ system, model: initialModel, materials }: { system
     setStatus('saving');
     setError(undefined);
     const res = await saveModelAction(model);
-    if (res.ok) { setStatus('saved'); router.refresh(); }
-    else { setStatus('error'); setError(res.error); }
+    if (res.ok) {
+      setStatus('saved');
+      if (isNew) router.push(`/models/${model.id}`);
+      else router.refresh();
+    } else { setStatus('error'); setError(res.error); }
   }
 
   const r = selected?.rule;
@@ -144,8 +148,8 @@ export function ModelEditor({ system, model: initialModel, materials }: { system
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       <div className="flex items-end justify-between gap-3 border-b border-line pb-3.5">
-        <div className="flex items-center gap-3">
-          <Visual visual={model.visual} name={model.name} size={36} rounded={6} />
+        <div className="flex items-start gap-3">
+          <div className="w-[300px]"><VisualEditor value={model.visual} name={model.name} onChange={(v) => setModel((m) => ({ ...m, visual: v }))} /></div>
           <div>
             <input className="input text text-[18px] font-semibold" style={{ height: 'auto', padding: '2px 8px' }} value={model.name} onChange={(e) => setModel((m) => ({ ...m, name: e.target.value }))} />
             <div className="mono mt-1 text-[11px] text-ink-3">{system.name} · {model.status} · {model.materials.length} materials</div>

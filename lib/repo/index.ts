@@ -17,5 +17,10 @@ export function getRepo(): Repository {
   return _repo;
 }
 
+/** Which backend {@link getRepo} resolved to — for honest UI self-reporting. */
+export function getRepoSource(): 'supabase' | 'memory' {
+  return getServiceClient() ? 'supabase' : 'memory';
+}
+
 export type { Repository } from './types';
 export { seed } from './seed';

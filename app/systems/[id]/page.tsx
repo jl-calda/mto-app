@@ -86,7 +86,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
         <section className="overflow-hidden rounded-md border border-line bg-panel">
           <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
             <h3 className="m-0 text-[13px] font-semibold">Models</h3>
-            <button className="btn primary sm">New model</button>
+            <Link href={`/models/new?system=${system.id}`} className="btn primary sm">New model</Link>
           </header>
           {system.models.map((m) => (
             <Link

@@ -82,7 +82,7 @@ export function AttachmentsEditor({
           <h3 className="m-0 text-[13px] font-semibold">Attachments</h3>
           <span className="mono text-[10px] text-ink-3">{attachments.length}</span>
         </div>
-        <button className="btn primary sm">Add attachment</button>
+        <button className="btn sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} title="Attachment authoring lands in the full system wizard">+ Add attachment</button>
       </header>
 
       <div className="flex items-center gap-2 border-b border-line px-3.5 py-2" style={{ background: 'var(--selected)' }}>

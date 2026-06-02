@@ -6,16 +6,6 @@ import { Visual } from '@/components/visual';
 import { getRepo } from '@/lib/repo';
 import type { Takeoff, Variant } from '@/lib/types';
 
-function takeoffHref(kind?: string): string {
-  return kind === 'height'
-    ? '/takeoff/ladder'
-    : kind === 'count'
-      ? '/takeoff/anchors'
-      : kind === 'length'
-        ? '/takeoff/guardrail'
-        : '#';
-}
-
 type Badge = { label: string; tone: 'ok' | 'warn' | 'muted' };
 const TONE: Record<Badge['tone'], { color: string; bg: string }> = {
   ok: { color: 'var(--ok)', bg: 'var(--ok-soft)' },
@@ -78,7 +68,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <section className="overflow-hidden rounded-md border border-line bg-panel">
             <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
               <h3 className="m-0 text-[13px] font-semibold">Take-offs</h3>
-              <button className="btn primary sm">New take-off</button>
+              <Link href={`/projects/${project.id}/takeoff/new`} className="btn primary sm">New take-off</Link>
             </header>
             {project.takeoffs.map((t) => {
               const sys = sysById.get(t.system_id);
@@ -87,7 +77,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               return (
                 <Link
                   key={t.id}
-                  href={takeoffHref(pk)}
+                  href={`/takeoff/${t.id}`}
                   className="flex items-center gap-3 border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover"
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >

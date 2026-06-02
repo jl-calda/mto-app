@@ -13,6 +13,12 @@ export function createMemoryRepo(): Repository {
     async getProject(id) {
       return seed.projects.find((p) => p.id === id) ?? null;
     },
+    async saveProject(project) {
+      const i = seed.projects.findIndex((p) => p.id === project.id);
+      if (i >= 0) seed.projects[i] = project;
+      else seed.projects.push(project);
+      return project;
+    },
     async listSystems() {
       return seed.systems;
     },
