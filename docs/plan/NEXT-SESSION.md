@@ -1,0 +1,114 @@
+# MTO — New-session handoff brief
+
+Paste this as the kickoff message for a fresh session. It assumes the repo
+`jl-calda/mto-app`, branch **`claude/trusting-meitner-VEsKg`**.
+
+---
+
+## What this is
+A construction **Material Take-Off** app: estimators enter measurements + design
+choices for safety-access systems (ladders, guardrails, anchors, walkways); a **pure,
+data-driven engine** turns declaratively-authored rules into a procurement bill of
+materials. Stack: **Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4 +
+Supabase**.
+
+## First, read these (in order)
+1. `docs/plan/README.md` — overview, architecture, coverage matrices, dependency graph.
+2. `docs/plan/01-foundations.md` … `12-cross-cutting.md` — the 12 self-contained briefs;
+   each has a **Status** note kept live as work lands. Trust those statuses.
+3. Skim `lib/engine/index.ts` (the engine's public surface) and `lib/repo/seed/index.ts`
+   (the seed data you'll be computing against).
+
+The original HTML/CSS design prototypes are **not in the container** (they were in
+`/tmp`). If you need pixel detail for a screen, re-fetch the design bundle (gzipped tar)
+and extract: `WebFetch` →
+`https://api.anthropic.com/v1/design/h/sljeZ06GaGWFeXDwB3zcug?open_file=takeoff-ladder.html`
+(it saves a `.bin`; `gunzip` then `tar xf`). Otherwise the implemented screens + plan
+capture the intent.
+
+## Locked decisions (do not relitigate)
+- **Supabase** is the backend. Project **`mto-app`**, ref `kzprzimqdhqnttkvdxpb`, org
+  `jlapps`, region ap-southeast-2 (the unrelated `akro-app` was paused to free a slot).
+  13-table schema applied (relational columns + **JSONB payloads** for declarative data;
+  RLS on, service-role-only). The app runs on the **in-memory seed** behind the same
+  `Repository` interface until `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set (then
+  `POST /api/seed`). Use the Supabase MCP tools for schema changes.
+- **Tailwind v4**, CSS-first `@theme inline` in `app/globals.css` mapping the design
+  tokens → utilities (`text-ink-3`, `bg-panel`, `border-line`, `font-mono`, …). Tokens
+  are the single source of truth.
+- **Auth: design now, build later** — org/user/membership tables + RLS exist; auth UI +
+  realtime collab are deferred to Brief 11 (v3). v1 is a single shared workspace.
+
+## Architecture you must respect
+- **The engine is pure** (`lib/engine/`): no I/O, no `Date.now`, no randomness;
+  deterministic solvers. `lib/engine/index.ts` is the ONLY import surface. **No
+  per-system branching** — it interprets `System`/`Model`/`Rule`/`PropertyInstance`
+  records generically.
+- **One evaluator, two entry points**: `resolveTakeoff` (take-off screens) and
+  `evaluateRuleAgainstSample` (model/rule live-eval pane) share the same core. Keep it so.
+- **`XRef`** (in `lib/engine/context.ts`) is the authoring↔runtime contract: the
+  X-picker (`deriveRuleContext`) and the resolver (`resolveX`) must consume the same
+  vocabulary + algorithm `outputFields`.
+- **Algorithms** (`pack_stock`, `place_supports`, `cut_from_stock`) live behind the
+  registry (`lib/engine/algorithms/`) — greedy/FFD v1; the greedy→ILP swap (Brief 10) is
+  internal. Add new solvers to `standardRegistry`.
+- **Snapshots are a correctness law**: take-offs store a deep `VariantSnapshot`; the
+  engine only ever receives snapshots, never live library refs.
+- **State split**: library/CRUD screens = Server Components + (future) Server Actions;
+  take-off + rule editors = client components running the pure engine live (<100ms).
+
+## Conventions / gotchas (save yourself time)
+- **Next 16**: `params` is a `Promise` — `await` it in `[id]` pages.
+- **Server↔client boundary**: a server component may render an individual client
+  component as an element, but **cannot access an object-property export across the
+  boundary** (e.g. `Icon.Chev` from the `'use client'` chrome → `undefined` "element type
+  is invalid"). Use a direct component import or an inline SVG in server components.
+- **Variant identity** = `row.kind === 'local' ? row.name : row.variant_id`; `applies_when.variants`
+  matches that string. (Seed systems use local rows.)
+- **Height flight auto-split**: the engine finds the flight-max modifier by name regex
+  (`/flight.*max|max.*flight/i`) and exposes `derived.flights` / `derived.rest_platforms`.
+- `getRepo()` is server-only (imports the Supabase service client). Don't import it into
+  client components — pass data down or use Server Actions.
+- Commit per increment; push with retry; **do not open a PR unless asked**. Commit footer:
+  `https://claude.ai/code/session_01KdDjuSyofRNHywb71wsmgP` (or the new session's link).
+
+## What's DONE (verified: build + typecheck + serve + correct computed output)
+- **Brief 01 Foundations** ✅ — full `lib/types/*` data model, engine skeleton→impl, repo
+  + seed + Supabase wiring, Tailwind, all routes.
+- **Brief 05 Engine core** ✅ — chain, archetypes (spacing/count/rate/threshold), 5
+  quantity patterns, SKU, consolidation; `deriveRuleContext`; model/rule editor +
+  live-eval pane at `/models/[id]`.
+- **Brief 08 Algorithms** (most) — `pack_stock`/`place_supports`/`cut_from_stock`,
+  `algorithm` quantity kind, **cut-demand aggregation → CuttingPlan**.
+- **Brief 07** (partial) — height flight auto-split.
+- **Brief 06** (most) — Projects list + detail; **three live take-offs** via shared
+  `components/takeoff/primitive-takeoff.tsx` (`/takeoff/{anchors,guardrail,ladder}`, the
+  ladder rewired from static to engine); CSV export.
+- **Brief 03/04 browse** — Materials, Variants, Systems list+detail (4 of 6 nav sections
+  real).
+
+## What's NEXT (priority order)
+1. **Brief 09 — Sub-assemblies + attachments** (the flagship feature): sub-assembly
+   inlining (`lib/engine/emit.ts`) + the ladder→walkway **attachment** (recursive
+   `resolveTakeoff`, 3-bucket inputs, suppressions, connection materials, shared cut
+   pool). Wire the attachment section back onto the ladder take-off. Build the
+   sub-assemblies browse + authoring screen (`subassemblies.html`).
+2. **Finish Brief 06** — editable rules (X-picker UI) + **take-off persistence** (Server
+   Action writing back through the repo; add write methods to the repo interface).
+3. **Brief 04** — the 4-step system authoring **wizard** + properties editor (mutations).
+4. **Brief 03** — materials/variants create/edit/delete mutations.
+5. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
+6. **Brief 10 (v2)** then **Brief 11 (v3)** then **Brief 12** (testing/CI/deploy/PDF).
+
+## How to verify
+```
+npm run build && npm run typecheck      # must stay green
+npm run start -- -p 3300 &              # then curl routes
+curl -s localhost:3300/takeoff/ladder | grep -c "Cage hoop"
+```
+Golden oracle for the engine: the prototype `engine.jsx computeGuardrail` output (re-fetch
+the bundle if needed). Keep solvers deterministic so output never flickers.
+
+**Suggested kickoff:** "Read `docs/plan/NEXT-SESSION.md` and `docs/plan/README.md`, then
+continue the build starting with Brief 09 (sub-assemblies + attachments). Work on branch
+`claude/trusting-meitner-VEsKg`, commit per increment, verify with build+typecheck+curl."
