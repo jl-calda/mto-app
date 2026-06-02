@@ -35,8 +35,13 @@ resource routes as Shell placeholders.
       typed with throwing stubs; algorithm interface + registry; warnings accumulator.
 - [x] Repository interface (async) + in-memory impl over ported seed; `getRepo()`.
 - [x] Supabase project provisioned; schema migration (relational + JSONB + RLS).
-- [ ] Load seed into Supabase + wire `supabase-repo.ts` (env-switched) behind the same interface. ← next
+- [x] `supabase-repo.ts` (payload-based) + service client + env-switch in `getRepo()` +
+      `.env.example`; seed loads via gated `POST /api/seed` once the service-role key is set.
 - [x] Placeholder pages for all 6 resources render the Shell with correct `navActive`.
+
+**Brief 01 complete.** Activation (deploy step): set `SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`, then `POST /api/seed` with `x-seed-token`. Until then the
+app runs on the in-memory seed behind the identical `Repository` interface.
 
 ## Definition of Done
 - [x] `npm run build` + `npm run typecheck` pass.
