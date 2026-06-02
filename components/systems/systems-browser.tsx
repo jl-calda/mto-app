@@ -35,9 +35,12 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
           <h1 className="m-0 text-[22px] font-semibold">Systems</h1>
           <div className="mt-1 text-[12px] text-ink-3">Reusable definitions of what to measure and which design choices to offer.</div>
         </div>
-        <div className="flex border-l border-line">
-          <Stat k="systems" v={systems.length} />
-          <Stat k="models" v={models} />
+        <div className="flex items-center gap-3">
+          <div className="flex border-l border-line">
+            <Stat k="systems" v={systems.length} />
+            <Stat k="models" v={models} />
+          </div>
+          <Link href="/systems/new" className="btn primary sm">New system</Link>
         </div>
       </div>
 

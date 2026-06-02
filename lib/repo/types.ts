@@ -19,6 +19,8 @@ export interface Repository {
 
   listSystems(): Promise<System[]>;
   getSystem(id: string): Promise<System | null>;
+  /** Upsert a system (authored via the wizard). */
+  saveSystem(system: System): Promise<System>;
 
   listModels(systemId?: string): Promise<Model[]>;
   getModel(id: string): Promise<Model | null>;

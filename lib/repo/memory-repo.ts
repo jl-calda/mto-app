@@ -19,6 +19,12 @@ export function createMemoryRepo(): Repository {
     async getSystem(id) {
       return seed.systems.find((s) => s.id === id) ?? null;
     },
+    async saveSystem(system) {
+      const i = seed.systems.findIndex((s) => s.id === system.id);
+      if (i >= 0) seed.systems[i] = system;
+      else seed.systems.push(system);
+      return system;
+    },
     async listModels(systemId) {
       const all = allModels();
       return systemId ? all.filter((m) => m.system_id === systemId) : all;

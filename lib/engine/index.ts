@@ -179,7 +179,13 @@ function resolveModel(
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
-  const propertyVals = evaluateProperties(system.properties, chain, input.property_values ?? {});
+  const vname = variantName(variant);
+  // variant×property gating (authored via the wizard matrix): a property with a
+  // non-empty applies_to_variants only applies to those variants.
+  const activeProperties = system.properties.filter(
+    (p) => !p.applies_to_variants?.length || p.applies_to_variants.includes(vname),
+  );
+  const propertyVals = evaluateProperties(activeProperties, chain, input.property_values ?? {});
   const derived: Record<string, number> = { free_ends_count: 2 };
 
   // height auto-split into flights when the climb exceeds the compliance flight max
@@ -200,7 +206,6 @@ function resolveModel(
     }
   }
   const primitiveCount = system.primitive.kind === 'count' ? rawValue : 0;
-  const vname = variantName(variant);
 
   // raw per-property inputs (for sub-assembly property_ref bindings)
   const propertyInputs: Record<string, Record<string, unknown>> = {};

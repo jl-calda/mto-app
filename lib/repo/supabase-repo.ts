@@ -38,6 +38,17 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     getProject: (id) => getPayload<Project>('project', id),
     listSystems: () => listPayloads<System>('system'),
     getSystem: (id) => getPayload<System>('system', id),
+    async saveSystem(system) {
+      const { error } = await db.from('system').upsert({
+        id: system.id,
+        name: system.name,
+        description: system.description ?? null,
+        primitive_kind: system.primitive.kind,
+        payload: system,
+      });
+      if (error) throw new Error(`system#${system.id}: ${error.message}`);
+      return system;
+    },
     listModels: (systemId) => listPayloadsWhere<Model>('model', 'system_id', systemId),
     getModel: (id) => getPayload<Model>('model', id),
     listMaterials: () => listPayloads<Material>('material'),
