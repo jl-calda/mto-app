@@ -82,7 +82,10 @@ capture the intent.
   (Golden engine unit tests → Brief 12.)
 - **Brief 08 Algorithms** (most) — `pack_stock`/`place_supports`/`cut_from_stock`,
   `algorithm` quantity kind, **cut-demand aggregation → CuttingPlan**.
-- **Brief 07** (partial) — height flight auto-split.
+- **Brief 07 Geometry + segmentation** ✅ — `buildGeometry` (segments/junctions/spans/mount
+  surfaces by primitive kind) + scope-aware property eval (`evaluatePropertiesScoped`); derived
+  segment/junction counts; segmented-length take-off input + segments/junctions panel; SpansEditor
+  + PlacementRulesEditor in the wizard (engine consumes both). Single-segment runs unchanged.
 - **Brief 06 Projects + take-off + CSV** ✅ — Projects list + detail (with stale-snapshot /
   review / saved badges); **three live take-offs** via shared
   `components/takeoff/primitive-takeoff.tsx` (`/takeoff/{anchors,guardrail,ladder}`, the
@@ -109,16 +112,17 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 07** — full segmentation/spans/placement (engine + UI): multi-segment length runs,
-   junctions (corner/splice), `SpanDeclaration` resolution + per_span properties, and the
-   `place_supports` placement-rules editor. Engine has the hooks (scopes, spans types) — wire them.
+1. **Brief 12** — **testing/CI** first (the one cross-cutting gap now that all v1/v1.5 features
+   exist): golden engine unit tests (the deferred 05/07 tests — ladder 35 rungs, guardrail
+   segmented 19 uprights, combined cut pool, spans/placement), typecheck+build+test in CI, then
+   deploy/RLS/PDF/perf.
 2. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
    take-off criteria-driven-defaults flash), greedy→ILP solver swap.
 3. **Brief 11 (v3)** scale/collab (auth UI, realtime, inventory/offcuts, area take-off).
-4. **Brief 12** — testing/CI/deploy/RLS/PDF/perf (incl. the deferred golden engine unit tests).
 
-v1 surface is essentially complete: **8 of 12 briefs done** (01, 02, 03, 04, 05, 06, 09 + most of
-07/08). Briefs 07/10/11/12 are the remaining depth/scale/ops work.
+**9 of 12 briefs done** (01–07, 09 + most of 08). Remaining: 08 tail (pack_stock_2d/offcut reuse),
+10 (v2 version history/ILP), 11 (v3 scale), 12 (testing/CI/deploy/PDF). The whole v1/v1.5 feature
+surface is real and engine-verified.
 
 ## How to verify
 ```
