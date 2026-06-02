@@ -84,21 +84,23 @@ capture the intent.
 - **Brief 06** (most) — Projects list + detail; **three live take-offs** via shared
   `components/takeoff/primitive-takeoff.tsx` (`/takeoff/{anchors,guardrail,ladder}`, the
   ladder rewired from static to engine); CSV export.
-- **Brief 03/04 browse** — Materials, Variants, Systems list+detail (4 of 6 nav sections
-  real).
+- **Brief 03/04 browse** — Materials, Variants, Systems list+detail.
+- **Brief 09 Sub-assemblies + attachments** ✅ — sub-assembly inlining (`lib/engine/emit.ts`,
+  bound params + `Rule.cut_length_param`) + the ladder→walkway **attachment**
+  (`lib/engine/attachments.ts`: 3-bucket inputs, recursive `resolveModel`, suppressions,
+  connection materials, ONE shared cut pool). Ladder take-off attachment section engine-driven;
+  `/sub-assemblies` browse + authoring + `AttachmentsEditor` on `/systems/[id]` built. (Authoring
+  **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 09 — Sub-assemblies + attachments** (the flagship feature): sub-assembly
-   inlining (`lib/engine/emit.ts`) + the ladder→walkway **attachment** (recursive
-   `resolveTakeoff`, 3-bucket inputs, suppressions, connection materials, shared cut
-   pool). Wire the attachment section back onto the ladder take-off. Build the
-   sub-assemblies browse + authoring screen (`subassemblies.html`).
-2. **Finish Brief 06** — editable rules (X-picker UI) + **take-off persistence** (Server
+1. **Finish Brief 06** — editable rules (X-picker UI) + **take-off persistence** (Server
    Action writing back through the repo; add write methods to the repo interface).
-3. **Brief 04** — the 4-step system authoring **wizard** + properties editor (mutations).
-4. **Brief 03** — materials/variants create/edit/delete mutations.
-5. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
-6. **Brief 10 (v2)** then **Brief 11 (v3)** then **Brief 12** (testing/CI/deploy/PDF).
+2. **Brief 04** — the 4-step system authoring **wizard** + properties editor (mutations).
+3. **Brief 03** — materials/variants create/edit/delete mutations.
+4. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
+5. **Brief 10 (v2)** — sub-assembly/variant/model **authoring mutations + version history**
+   (incl. the deferred Brief 09 persistence), greedy→ILP solver swap; then **Brief 11 (v3)**,
+   **Brief 12** (testing/CI/deploy/PDF).
 
 ## How to verify
 ```
