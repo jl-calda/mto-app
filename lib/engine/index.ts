@@ -259,7 +259,7 @@ function resolveModel(
         trace.push({ label: mm.material_id, detail: 'skip · algorithm not registered' });
         continue;
       }
-      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [] });
+      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [], placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules });
       algorithmOutputs.set(mm.id, out);
       const aqty = out.fields[algo.outputFields[0]] ?? 0;
       if (aqty <= 0) {

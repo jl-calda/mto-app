@@ -3,6 +3,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ChainRole, PropertyArchetype, PropertyInput, PropertyInstance, PropertyScope, System } from '@/lib/types';
 import { Card, Field, NumberInput, Select, Stub, TextInput } from './parts';
+import { SpansEditor } from './SpansEditor';
+import { PlacementRulesEditor } from './PlacementRulesEditor';
 
 const ARCHETYPES: PropertyArchetype[] = ['spacing', 'count', 'rate', 'stock', 'variant', 'threshold', 'junction'];
 const SCOPES = ['per_segment', 'per_junction', 'per_mount_surface', 'set_level', 'per_span'] as const;
@@ -89,8 +91,8 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
         </div>
       </Card>
 
-      <Stub title="Spans" owner="Brief 07">Declare named spans (segment/junction endpoints) that scope per-span properties.</Stub>
-      <Stub title="Placement rules" owner="Brief 07">End clearances, min/max spacing, forbidden zones for algorithm-driven placement.</Stub>
+      <SpansEditor system={system} setSystem={setSystem} />
+      <PlacementRulesEditor system={system} setSystem={setSystem} />
       <Stub title="Attachments" owner="Brief 09">Author on the system detail page — connection points, presets, suppressions, connection materials.</Stub>
     </div>
   );
