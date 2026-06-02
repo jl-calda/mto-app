@@ -1,4 +1,4 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { VariantsBrowser } from '@/components/variants/variants-browser';
 import { getRepo } from '@/lib/repo';
 

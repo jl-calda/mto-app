@@ -1,4 +1,4 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { SubAssembliesBrowser, type Usage } from '@/components/subassemblies/subassemblies-browser';
 import { getRepo } from '@/lib/repo';
 

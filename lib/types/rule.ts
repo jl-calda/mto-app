@@ -11,6 +11,8 @@ export type Rule = {
   cut_length?: number;
   /** Sub-assembly context: take the cut length from a bound parameter by name. */
   cut_length_param?: string;
+  /** Resolve this line's SKU from a model SkuLookup table instead of the material's SKU. */
+  sku_lookup?: SkuLookupRef;
   algorithm_config?: AlgorithmCall;
   emit_per?: Emission[];
   emit_once?: Emission[];
@@ -18,6 +20,8 @@ export type Rule = {
   applies_when: {
     variants: string[];
     criteria: Record<string, string[]>;
+    /** Optional modifier-equality gates (e.g. is_loop=true, configuration=overhead). */
+    modifiers?: Record<string, string[]>;
   };
   note?: string;
 };
@@ -30,7 +34,17 @@ export type PerTarget =
   | { kind: 'algorithm_output'; algorithm: string; field: string }
   | { kind: 'parameter'; name: string }; // inside a sub-assembly
 
-export type AlgorithmName = 'place_supports' | 'pack_stock' | 'cut_from_stock' | 'pack_stock_2d';
+export type SkuKeyRef =
+  | { kind: 'literal'; value: string }
+  | { kind: 'modifier'; name: string }
+  | { kind: 'modifier_band'; name: string } // banded_distance → matched band's sku_key
+  | { kind: 'criterion'; name: string }
+  | { kind: 'property_input'; property: string; input: string }
+  | { kind: 'variant_attr'; name: string };
+
+export type SkuLookupRef = { table: string; keys: SkuKeyRef[] };
+
+export type AlgorithmName = 'place_supports' | 'place_supports_optimal' | 'pack_stock' | 'cut_from_stock' | 'pack_stock_2d';
 
 export type AlgorithmCall = {
   algorithm: AlgorithmName;

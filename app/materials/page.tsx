@@ -1,4 +1,4 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { MaterialsBrowser } from '@/components/materials/materials-browser';
 import { getRepo } from '@/lib/repo';
 

@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Shell, PrimitiveBadge, Stat } from '@/components/chrome';
+import { Shell } from '@/components/shell';
+import { PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
 import { AttachmentsEditor } from '@/components/system-wizard/AttachmentsEditor';
 import { getRepo } from '@/lib/repo';

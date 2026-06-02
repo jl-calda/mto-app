@@ -34,6 +34,8 @@ export type {
   AlgorithmCall,
   Emission,
   SkuLookup,
+  SkuKeyRef,
+  SkuLookupRef,
   CriteriaDefault,
   ModelMaterial,
 } from './rule';

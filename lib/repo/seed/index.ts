@@ -10,6 +10,7 @@ import type {
   System,
   Variant,
 } from '@/lib/types';
+import { exampleMaterials, exampleSubAssemblies, exampleSystems } from './examples';
 
 const materials: Material[] = [
   { id: 'mat-stile', sku: 'VEC-LDR-S-3000-AN', name: 'Ladder stile · 3000 mm · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: true, stock_options: [3000], cut_allowance: 3, min_offcut_to_retain: 300 },
@@ -245,4 +246,11 @@ const projects: Project[] = [
   },
 ];
 
-export const seed = { projects, systems, materials, variants, subAssemblies, inventory };
+export const seed = {
+  projects,
+  systems: [...systems, ...exampleSystems],
+  materials: [...materials, ...exampleMaterials],
+  variants,
+  subAssemblies: [...subAssemblies, ...exampleSubAssemblies],
+  inventory,
+};

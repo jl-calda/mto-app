@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Shell, PrimitiveBadge, Stat } from '@/components/chrome';
+import { Shell } from '@/components/shell';
+import { PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
 import { getRepo } from '@/lib/repo';
 import type { Takeoff, Variant } from '@/lib/types';
