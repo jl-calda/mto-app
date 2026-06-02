@@ -1,6 +1,7 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { AnchorsTakeoff } from '@/components/takeoff/anchors-takeoff';
 import { getRepo } from '@/lib/repo';
+import { deriveCriteria, derivePrimitiveTotal } from '@/lib/takeoff-init';
 import type { VariantSnapshot } from '@/lib/types';
 
 export default async function AnchorsTakeoffPage() {
@@ -18,11 +19,9 @@ export default async function AnchorsTakeoffPage() {
     );
   }
 
-  const variant: VariantSnapshot = {
-    source_ref: { kind: 'local', name: 'Standard', attributes: {} },
-    attributes: {},
-  };
-  const criteria: Record<string, string> = { substrate: 'concrete', compliance_code: 'EN_795' };
+  const takeoff = await repo.getTakeoff('tko-anchors');
+  const variant: VariantSnapshot = takeoff?.variant_choice ?? { source_ref: { kind: 'local', name: 'Standard', attributes: {} }, attributes: {} };
+  const criteria = deriveCriteria(system, takeoff);
 
   return (
     <Shell
@@ -36,6 +35,7 @@ export default async function AnchorsTakeoffPage() {
         variant={variant}
         criteria={criteria}
         title="Roof anchor points"
+        initial={derivePrimitiveTotal(takeoff) ?? 12}
         persist={{ takeoffId: 'tko-anchors', projectId: 'prj-westfield' }}
       />
     </Shell>

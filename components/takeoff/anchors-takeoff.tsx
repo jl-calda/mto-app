@@ -14,6 +14,7 @@ export function AnchorsTakeoff({
   variant,
   criteria,
   title,
+  initial = 12,
   persist,
 }: {
   system: System;
@@ -22,9 +23,10 @@ export function AnchorsTakeoff({
   variant: VariantSnapshot;
   criteria: Record<string, string>;
   title: string;
+  initial?: number;
   persist?: PersistTarget;
 }) {
-  const [count, setCount] = useState(12);
+  const [count, setCount] = useState(initial);
 
   const result = useMemo(
     () =>

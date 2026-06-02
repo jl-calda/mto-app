@@ -1,6 +1,7 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { PrimitiveTakeoff } from '@/components/takeoff/primitive-takeoff';
 import { getRepo } from '@/lib/repo';
+import { deriveCriteria, derivePrimitiveTotal, deriveVariantIndex } from '@/lib/takeoff-init';
 
 export default async function GuardrailTakeoffPage() {
   const repo = getRepo();
@@ -17,7 +18,8 @@ export default async function GuardrailTakeoffPage() {
     );
   }
 
-  const criteria: Record<string, string> = { compliance_code: 'EN_ISO_14122-3', material_finish: 'ss316' };
+  const takeoff = await repo.getTakeoff('tko-guardrail');
+  const criteria = deriveCriteria(system, takeoff);
 
   return (
     <Shell navActive="projects" crumbs={[{ label: 'Projects', href: '/' }, { label: 'East elev. guardrail · live' }]}>
@@ -28,7 +30,8 @@ export default async function GuardrailTakeoffPage() {
         criteria={criteria}
         title="East elevation guardrail"
         primitive="length"
-        initial={24000}
+        initial={derivePrimitiveTotal(takeoff) ?? 24000}
+        initialVariant={deriveVariantIndex(system, takeoff)}
         iconName="post"
         persist={{ takeoffId: 'tko-guardrail', projectId: 'prj-westfield' }}
       />

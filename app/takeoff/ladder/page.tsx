@@ -1,6 +1,7 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { PrimitiveTakeoff } from '@/components/takeoff/primitive-takeoff';
 import { getRepo } from '@/lib/repo';
+import { deriveCriteria, derivePrimitiveTotal, deriveVariantIndex } from '@/lib/takeoff-init';
 
 // Rewired from the original static port to the real engine (Brief 06/07/08/09):
 // height primitive → auto-split flights, spacing (rungs/brackets), threshold (cage
@@ -24,11 +25,8 @@ export default async function LadderTakeoffPage() {
     );
   }
 
-  const criteria: Record<string, string> = {
-    compliance_code: 'NF E85-016',
-    material_finish: 'anodized',
-    load_class: '1',
-  };
+  const takeoff = await repo.getTakeoff('tko-ladder');
+  const criteria = deriveCriteria(system, takeoff);
 
   // systems this ladder can attach (resolved by the engine recursively)
   const attachIds = new Set((system.attachments ?? []).map((a) => a.attached_system_id));
@@ -50,8 +48,8 @@ export default async function LadderTakeoffPage() {
         criteria={criteria}
         title="Plant access ladder · L1→L4"
         primitive="height"
-        initial={9200}
-        initialVariant={1}
+        initial={derivePrimitiveTotal(takeoff) ?? 9200}
+        initialVariant={deriveVariantIndex(system, takeoff)}
         iconName="ladder"
         subAssemblies={subAssemblies}
         attachableSystems={attachableSystems}

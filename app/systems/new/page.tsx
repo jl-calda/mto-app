@@ -1,4 +1,4 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { SystemWizard } from '@/components/system-wizard/SystemWizard';
 import type { System } from '@/lib/types';
 

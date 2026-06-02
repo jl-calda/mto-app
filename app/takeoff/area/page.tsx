@@ -1,4 +1,4 @@
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { AreaTakeoff } from '@/components/takeoff/area-takeoff';
 
 // Area primitive take-off (Brief 11 · item 40) — 2D sheet nesting via pack_stock_2d.

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Shell } from '@/components/chrome';
+import { Shell } from '@/components/shell';
 import { SystemWizard } from '@/components/system-wizard/SystemWizard';
 import { getRepo } from '@/lib/repo';
 

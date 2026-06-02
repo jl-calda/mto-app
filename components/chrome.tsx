@@ -170,17 +170,18 @@ const tbStyles: Record<string, CSSProperties> = {
   },
 };
 
-type NavItem = { id: string; label: string; href: string; icon: ReactNode; count: number; tag?: string };
+type NavItem = { id: string; label: string; href: string; icon: ReactNode; tag?: string };
+export type RecentItem = { label: string; href: string; color: string; tag?: string };
 
 // ----- SIDEBAR (global nav) -----
-export function Sidebar({ active = 'projects' }: { active?: string }) {
+export function Sidebar({ active = 'projects', counts, recent }: { active?: string; counts?: Record<string, number>; recent?: RecentItem[] }) {
   const items: NavItem[] = [
-    { id: 'projects', label: 'Projects', href: '/', icon: <Icon.Folder />, count: 7 },
-    { id: 'systems', label: 'Systems', href: '/systems', icon: <Icon.Layers />, count: 4 },
-    { id: 'variants', label: 'Variants', href: '/variants', icon: <Icon.Branch />, count: 12 },
-    { id: 'subassemblies', label: 'Sub-assemblies', href: '/sub-assemblies', icon: <Icon.Stack />, count: 8 },
-    { id: 'materials', label: 'Materials', href: '/materials', icon: <Icon.Box />, count: 342 },
-    { id: 'inventory', label: 'Inventory', href: '/inventory', icon: <Icon.Bin />, count: 47, tag: 'v3' },
+    { id: 'projects', label: 'Projects', href: '/', icon: <Icon.Folder /> },
+    { id: 'systems', label: 'Systems', href: '/systems', icon: <Icon.Layers /> },
+    { id: 'variants', label: 'Variants', href: '/variants', icon: <Icon.Branch /> },
+    { id: 'subassemblies', label: 'Sub-assemblies', href: '/sub-assemblies', icon: <Icon.Stack /> },
+    { id: 'materials', label: 'Materials', href: '/materials', icon: <Icon.Box /> },
+    { id: 'inventory', label: 'Inventory', href: '/inventory', icon: <Icon.Bin />, tag: 'v3' },
   ];
   return (
     <aside style={sbStyles.bar}>
@@ -195,34 +196,26 @@ export function Sidebar({ active = 'projects' }: { active?: string }) {
             <span style={sbStyles.itemIcon}>{it.icon}</span>
             <span style={{ flex: 1 }}>{it.label}</span>
             {it.tag && <span style={sbStyles.itemTag} className="mono">{it.tag}</span>}
-            <span className="mono" style={sbStyles.itemCount}>{it.count}</span>
+            {counts?.[it.id] != null && <span className="mono" style={sbStyles.itemCount}>{counts[it.id]}</span>}
           </Link>
         ))}
       </div>
-      <div style={sbStyles.section}>
-        <div className="uc" style={{ padding: '12px 12px 4px' }}>Recent</div>
-        <Link href="/takeoff/guardrail" style={sbStyles.itemSm}>
-          <Icon.Dot style={{ color: 'var(--prim-length)' }} />
-          <span>East elev. guardrail</span>
-        </Link>
-        <Link href="/takeoff/ladder" style={sbStyles.itemSm}>
-          <Icon.Dot style={{ color: 'var(--prim-height)' }} />
-          <span>Plant access ladder</span>
-        </Link>
-        <Link href="/takeoff/anchors" style={sbStyles.itemSm}>
-          <Icon.Dot style={{ color: 'var(--prim-count)' }} />
-          <span>Roof anchor points</span>
-        </Link>
-        <Link href="/takeoff/area" style={sbStyles.itemSm}>
-          <Icon.Dot style={{ color: '#5A8F2A' }} />
-          <span>Roof sheet cladding</span>
-          <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--annotation)' }} className="mono">v3</span>
-        </Link>
-      </div>
+      {recent && recent.length > 0 && (
+        <div style={sbStyles.section}>
+          <div className="uc" style={{ padding: '12px 12px 4px' }}>Recent</div>
+          {recent.map((r, i) => (
+            <Link key={i} href={r.href} style={sbStyles.itemSm}>
+              <Icon.Dot style={{ color: r.color }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+              {r.tag && <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--annotation)' }} className="mono">{r.tag}</span>}
+            </Link>
+          ))}
+        </div>
+      )}
       <div style={{ flex: 1 }} />
       <div style={sbStyles.foot}>
         <div className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
-          mto · v3.0.0 · build 1842
+          mto · in-memory seed
         </div>
       </div>
     </aside>
@@ -258,38 +251,9 @@ const sbStyles: Record<string, CSSProperties> = {
   foot: { padding: 12, borderTop: '1px solid var(--line)' },
 };
 
-// ----- main shell -----
-export function Shell({
-  crumbs,
-  navActive,
-  topRight,
-  sidebar = true,
-  children,
-  scroll = true,
-}: {
-  crumbs?: Crumb[];
-  navActive?: string;
-  topRight?: ReactNode;
-  sidebar?: boolean;
-  children?: ReactNode;
-  scroll?: boolean;
-}) {
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar crumbs={crumbs} right={topRight} />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {sidebar && <Sidebar active={navActive} />}
-        <main style={{
-          flex: 1, minWidth: 0,
-          overflow: scroll ? 'auto' : 'hidden',
-          background: 'var(--bg)',
-        }}>
-          {children}
-        </main>
-      </div>
-    </div>
-  );
-}
+// Shell (the data-aware app frame) lives in components/shell.tsx (server) so it
+// can read the repo for nav counts without dragging server-only into this client
+// module. TopBar / Sidebar above are the presentational pieces it composes.
 
 // ----- page header (inside main) -----
 export function PageHeader({
