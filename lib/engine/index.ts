@@ -132,6 +132,7 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const trace: TraceNode[] = [];
   const registry = args.algorithms ?? standardRegistry;
   const algorithmOutputs = new Map<string, AlgoOutput>();
+  const cutPool = new Map<string, number[]>();
 
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
@@ -203,7 +204,9 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
       continue;
     }
     if (q.kind === 'cut') {
-      // cut demands aggregate in Brief 08; record for now.
+      const arr = cutPool.get(mm.material_id) ?? [];
+      for (let i = 0; i < q.occurrences; i++) arr.push(q.cut_length);
+      cutPool.set(mm.material_id, arr);
       trace.push({ label: mm.material_id, detail: `cut · ${q.cut_length}mm × ${q.occurrences}` });
       continue;
     }
@@ -226,6 +229,46 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
     trace.push({ label: mm.material_id, detail: `${q.value} × ${mat?.sku ?? mm.material_id}` });
   }
 
+  // aggregate cut demands per cuttable material → cut_from_stock → stock lines
+  const cuttingPlans: CuttingPlan[] = [];
+  const cutAlgo = registry.get('cut_from_stock');
+  for (const [matId, demands] of cutPool) {
+    if (demands.length === 0) continue;
+    const mat = materials.get(matId);
+    const allowance = mat?.cut_allowance ?? 0;
+    const out = cutAlgo?.run({ demands, stock_options: mat?.stock_options ?? [], cut_allowance: allowance });
+    if (!out) continue;
+    const stocks = out.fields.stocks ?? 0;
+    const detail = out.detail as { plan: { stock_length: number; cuts: number[]; offcut: number }[] };
+    const plan: CuttingPlan = {
+      per_stock: detail.plan.map((b) => {
+        let pos = 0;
+        const cuts = b.cuts.map((len) => {
+          const cut = { length: len, source_material_id: matId, position_in_stock: [pos, pos + len] as [number, number] };
+          pos += len + allowance;
+          return cut;
+        });
+        return { stock_length: b.stock_length, cuts, offcut: b.offcut, kerf_total: b.cuts.length * allowance };
+      }),
+    };
+    cuttingPlans.push(plan);
+    if (stocks > 0) {
+      lines.push({
+        sku: mat?.sku ?? matId,
+        material_visual: mat?.visual,
+        description: mat?.name ?? matId,
+        qty: stocks,
+        unit: mat?.unit ?? 'ea',
+        source_material_id: matId,
+        cutting_plan: plan,
+        notes: `${demands.length} cut(s)`,
+      });
+    }
+    if (out.fields.total_offcut > (mat?.stock_options?.[0] ?? 0)) {
+      warnings.push({ level: 'info', source: 'algorithm', type: 'high_wastage', message: `${mat?.name ?? matId}: ${out.fields.total_offcut.toLocaleString()} mm offcut across ${stocks} stock(s)`, affected_fields: [matId] });
+    }
+  }
+
   // consolidate identical SKUs
   const bySku = new Map<string, MtoLine>();
   for (const l of lines) {
@@ -239,7 +282,7 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
     geometry: geometryFrom(chain),
     chain,
     mto,
-    cuttingPlans: [],
+    cuttingPlans,
     warnings,
     trace,
     counters: {

@@ -207,6 +207,11 @@ export function PrimitiveTakeoff({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[12px]">{l.description}</div>
                   <div className="mono truncate text-[10px] text-ink-3">{l.sku}</div>
+                  {l.cutting_plan && (
+                    <div className="mono text-[9px] text-annotation">
+                      cut: {l.cutting_plan.per_stock.length} stock · {l.cutting_plan.per_stock.reduce((s, p) => s + p.cuts.length, 0)} pieces
+                    </div>
+                  )}
                 </div>
                 <div className="mono w-[44px] text-right text-[13px] font-medium">{l.qty}</div>
                 <div className="mono w-[28px] text-[11px] text-ink-3">{l.unit}</div>

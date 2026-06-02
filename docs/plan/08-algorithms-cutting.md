@@ -4,8 +4,10 @@
 
 > Algorithms implemented behind the registry: `pack_stock` (tight/spaced),
 > `place_supports` (greedy), `cut_from_stock` (FFD). The `algorithm` quantity kind is
-> wired — the guardrail's rail now packs into 4×6000mm pieces via `pack_stock`. Next:
-> stock/threshold/junction property archetypes + cut-demand aggregation → cutting plan.
+> wired (guardrail rail → 4×6000mm). **Cut-demand aggregation works**: `cut` rules pool
+> per material → `cut_from_stock` → a stock-order MTO line carrying a `CuttingPlan` +
+> high-wastage warning (ladder L-bar → 1 stock · 7 pieces). Threshold archetype done
+> (cage hoops). Remaining: stock-archetype properties + per-segment placement.
 
 ## Goal
 Stock/threshold/junction archetypes fully live; `place_supports` (greedy), `pack_stock`

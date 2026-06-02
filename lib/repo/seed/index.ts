@@ -22,6 +22,7 @@ const materials: Material[] = [
   { id: 'mat-stringer', sku: 'VEC-LDR-STR-AN', name: 'Cage stringer · anodized', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: false },
   { id: 'mat-restplatform', sku: 'VEC-LDR-RP-AN', name: 'Rest platform', vendor: 'Vectaco', unit: 'ea', category: 'Ladder', attributes: {}, is_cuttable: false },
   { id: 'mat-cert', sku: 'VEC-CERT-NF', name: 'Compliance certificate · NF E85-016', vendor: 'Vectaco', unit: 'ea', category: 'Compliance', attributes: {}, is_cuttable: false },
+  { id: 'mat-lbar', sku: 'VEC-LBAR-6000', name: 'L-bar · 6000 mm (cut to length)', vendor: 'Vectaco', unit: 'ea', category: 'Mounting', attributes: {}, is_cuttable: true, stock_options: [6000], cut_allowance: 3, min_offcut_to_retain: 300 },
 ];
 
 const variants: Variant[] = [
@@ -82,6 +83,7 @@ const systems: System[] = [
           { id: 'mm-bracket', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'property', name: 'mounting_brackets' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-restplatform', material_id: 'mat-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-cert', material_id: 'mat-cert', rule: { qty_kind: 'fixed', qty: 1, applies_when: { variants: [], criteria: {} } } },
+          { id: 'mm-lbar', material_id: 'mat-lbar', rule: { qty_kind: 'cut', cut_length: 800, per: { kind: 'property', name: 'mounting_brackets' }, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],
