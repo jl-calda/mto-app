@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Shell, PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
@@ -75,13 +76,18 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
             <button className="btn primary sm">New model</button>
           </header>
           {system.models.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 border-b border-line px-3.5 py-2.5 last:border-b-0">
+            <Link
+              key={m.id}
+              href={`/models/${m.id}`}
+              className="flex items-center gap-3 border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
               <Visual visual={m.visual} name={m.name} size={24} rounded={3} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-medium">{m.name}</div>
                 <div className="mono text-[10px] text-ink-3">{m.materials.length} materials · {m.status}</div>
               </div>
-            </div>
+            </Link>
           ))}
           {system.models.length === 0 && (
             <div className="px-3.5 py-6 text-center text-[12px] text-ink-3">No models yet.</div>

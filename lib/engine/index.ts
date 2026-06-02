@@ -316,8 +316,21 @@ export function evaluateRuleAgainstSample(
   const rawValue = num(Object.values(sample.primitive ?? {})[0]);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, {});
   const propertyVals = evaluateProperties(system.properties, chain, sample.properties ?? {});
-  const q = resolveQuantity(rule, propertyVals, { free_ends_count: 2 }, system.primitive.kind === 'count' ? rawValue : 0, chain);
   const sku = material?.sku ?? null;
+  if (rule.qty_kind === 'algorithm') {
+    const algo = rule.algorithm_config ? standardRegistry.get(rule.algorithm_config.algorithm) : undefined;
+    const out = algo?.run({ length: chainLength(chain), stock_options: material?.stock_options ?? [] });
+    const aqty = out && algo ? (out.fields[algo.outputFields[0]] ?? 0) : 0;
+    return {
+      fires: aqty > 0,
+      qty: aqty,
+      sku,
+      checks: { variant: true, criteria: true },
+      skipReason: aqty > 0 ? undefined : 'algorithm produced 0',
+      trace: { label: rule.algorithm_config?.algorithm ?? 'algorithm', detail: `${aqty}` },
+    };
+  }
+  const q = resolveQuantity(rule, propertyVals, { free_ends_count: 2 }, system.primitive.kind === 'count' ? rawValue : 0, chain);
   if (q.kind === 'cut') {
     return { fires: true, qty: { cut_length: q.cut_length, occurrences: q.occurrences }, sku, checks: { variant: true, criteria: true }, trace: { label: 'cut', detail: `${q.cut_length}mm × ${q.occurrences}` } };
   }

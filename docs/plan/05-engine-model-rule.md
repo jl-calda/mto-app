@@ -6,8 +6,11 @@
 > (length/height/count), property archetypes (spacing/count/rate/threshold),
 > the 5 quantity patterns, `applies_when` (variant ∧ criteria), SKU = referenced
 > material, consolidation, `deriveRuleContext`, and `evaluateRuleAgainstSample`
-> — all pure, no per-system branching. Proven via the live anchors take-off.
-> Next: model-edit + material-rule editor UIs (live-eval pane = the same evaluator).
+> — all pure, no per-system branching. Proven via the live take-offs.
+> Model/rule editor live at `/models/[id]`: material list (English rule summaries) +
+> three-knob rule display + a **live-evaluation pane** (editable sample inputs →
+> fires/skip badge, resolved qty/SKU, 4-step trace) that calls the SAME
+> `evaluateRuleAgainstSample`. Next: make the rule itself editable (X-picker) + persist.
 
 ## Goal
 The **working single-primitive interpreter** (length + count; no segmentation/algorithms/
