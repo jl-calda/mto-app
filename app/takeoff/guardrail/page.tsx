@@ -30,6 +30,7 @@ export default async function GuardrailTakeoffPage() {
         primitive="length"
         initial={24000}
         iconName="post"
+        persist={{ takeoffId: 'tko-guardrail', projectId: 'prj-westfield' }}
       />
     </Shell>
   );

@@ -43,12 +43,15 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           </div>
-          <div className="flex border-l border-line">
-            <Stat k="variants" v={system.variants.rows.length} />
-            <Stat k="modifiers" v={system.modifiers.length} />
-            <Stat k="criteria" v={system.criteria.length} />
-            <Stat k="properties" v={system.properties.length} />
-            <Stat k="models" v={system.models.length} />
+          <div className="flex items-center gap-3">
+            <div className="flex border-l border-line">
+              <Stat k="variants" v={system.variants.rows.length} />
+              <Stat k="modifiers" v={system.modifiers.length} />
+              <Stat k="criteria" v={system.criteria.length} />
+              <Stat k="properties" v={system.properties.length} />
+              <Stat k="models" v={system.models.length} />
+            </div>
+            <Link href={`/systems/${system.id}/edit`} className="btn sm">Edit</Link>
           </div>
         </div>
 

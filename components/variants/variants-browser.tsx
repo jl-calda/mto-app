@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
+import { VariantEditor } from '@/components/variants/variant-editor';
 import type { AttrValue, Variant } from '@/lib/types';
 
 const STATUSES = ['all', 'active', 'deprecated', 'archived'] as const;
@@ -11,10 +12,19 @@ function fmt(v: AttrValue): string {
   return Array.isArray(v) ? v.join(', ') : String(v);
 }
 
+function blankVariant(): Variant {
+  return {
+    id: `var-${crypto.randomUUID().slice(0, 8)}`, name: 'New variant', common_attributes: {},
+    current_version: 1, status: 'active', used_in_systems: [],
+    versions: [{ version: 1, published_at: 0, changelog: 'Initial', common_attributes: {} }],
+  };
+}
+
 export function VariantsBrowser({ variants }: { variants: Variant[] }) {
   const [status, setStatus] = useState<string>('all');
   const [q, setQ] = useState('');
   const [selId, setSelId] = useState(variants[0]?.id ?? '');
+  const [editing, setEditing] = useState<{ variant: Variant; isNew: boolean } | null>(null);
 
   const rows = useMemo(() => {
     const n = q.trim().toLowerCase();
@@ -33,9 +43,12 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
           <h1 className="m-0 text-[22px] font-semibold">Variants</h1>
           <div className="mt-1 text-[12px] text-ink-3">Global design-family alternatives, snapshotted into take-offs at use.</div>
         </div>
-        <div className="flex border-l border-line">
-          <Stat k="active" v={active} />
-          <Stat k="total" v={variants.length} />
+        <div className="flex items-center gap-3">
+          <div className="flex border-l border-line">
+            <Stat k="active" v={active} />
+            <Stat k="total" v={variants.length} />
+          </div>
+          <button className="btn primary sm" onClick={() => setEditing({ variant: blankVariant(), isNew: true })}>New variant</button>
         </div>
       </div>
 
@@ -69,8 +82,10 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
           {rows.length === 0 && <div className="px-3.5 py-8 text-center text-[12px] text-ink-3">No variants match.</div>}
         </section>
 
-        {/* detail */}
-        {selected && (
+        {/* detail / editor */}
+        {editing ? (
+          <VariantEditor key={editing.variant.id} variant={editing.variant} isNew={editing.isNew} onClose={() => setEditing(null)} />
+        ) : selected ? (
           <section className="flex flex-col gap-3">
             <div className="flex items-center gap-3 rounded-md border border-line bg-panel p-3.5">
               <Visual visual={selected.visual} name={selected.name} size={36} rounded={6} />
@@ -80,6 +95,7 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
               </div>
               <span className="tag" style={{ color: 'var(--accent)', background: 'var(--accent-soft)' }}>v{selected.current_version}</span>
               <span className="tag">{selected.status}</span>
+              <button className="btn sm" onClick={() => setEditing({ variant: selected, isNew: false })}>Edit</button>
             </div>
 
             <Panel title="Common attributes">
@@ -111,7 +127,7 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
               <div className="text-[12px] text-ink-3">Timeline · diff · changelog · pin policy — <span className="mono text-annotation">v2 (Brief 10)</span>.</div>
             </Panel>
           </section>
-        )}
+        ) : null}
       </div>
     </div>
   );

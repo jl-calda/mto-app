@@ -63,6 +63,8 @@ export type PropertyInstance = {
   length_basis?: ChainRole;
   packing_policy?: PackingPolicy; // for 'stock'
   placement_rules?: PlacementRules; // for algorithm-driven
+  /** Variant×property gating (authored via the wizard matrix). Empty/undefined = all variants. */
+  applies_to_variants?: string[];
 };
 
 export type SpanEndpoint =

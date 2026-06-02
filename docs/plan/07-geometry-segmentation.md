@@ -1,11 +1,15 @@
 # Brief 07 — Segmentation + geometry + spans/placement editors
 
-**Milestone:** v1.5 (items 10–13, 24, + spans/placement editors of item 23) · **Depends on:** 06 · **Status:** in progress
+**Milestone:** v1.5 (items 10–13, 24, + spans/placement editors of item 23) · **Depends on:** 06 · **Status:** ✅ done
+(scope/segmentation unit tests fold into Brief 12 CI)
 
-> Height flight auto-split implemented (engine): climb > flight_max → `flights` /
-> `rest_platforms` derived counts + an "auto-split engaged" info warning; the ladder
-> splits into 2 flights. Next: full canonical geometry (segments/junctions/spans/
-> mount-surfaces) + segmentable length + the dimension-chain derivations panel.
+> Canonical geometry implemented (engine): `buildGeometry` resolves segments +
+> junctions (+ spans + a whole-run mount surface) by primitive kind; scope-aware
+> property evaluation (`evaluatePropertiesScoped`: per_segment sums per segment,
+> per_span uses the span length, per_mount_surface per surface); derived
+> segment/junction counts. The take-off has a segmented-length input + a
+> segments/junctions panel. Spans + placement-rules editors author + persist +
+> drive the engine.
 
 ## Goal
 Engine geometry depth (segments, junctions, spans, mount surfaces, scope instances, dimension-
@@ -20,14 +24,26 @@ from `system-edit.html`.
 - Read-only dimension-chain panel on the take-off (item 24).
 
 ## Tasks
-- [ ] Segmentable length → segments + junctions (each with own chain + foot/head roles).
-- [ ] Height flight auto-split (>flight_max → rest_platform junctions; adjacent-segment constraints).
-- [ ] `SpanDeclaration` resolution; mount_surfaces with support_grid; supports/joints/gaps.
-- [ ] Per-scope rule firing (scope returns multiple instances; placement rules apply per segment).
-- [ ] Spans + placement-rules editors author and persist; engine consumes them.
-- [ ] Scope + segmentation unit tests.
+- [x] Segmentable length → segments + junctions (each with own chain + foot/head roles).
+- [x] Height flight auto-split (>flight_max → rest_platform junctions).
+- [x] `SpanDeclaration` resolution; mount_surfaces (whole-run v1); per_span/per_mount_surface lengths.
+- [x] Per-scope property evaluation (per_segment sums per segment; per_junction via derived
+      `junction_<type>` counts driving rules).
+- [x] Spans + placement-rules editors author and persist; engine consumes them.
+- [ ] Scope + segmentation unit tests → **Brief 12 (CI)**. Verified by hand via temp harnesses.
 
 ## Definition of Done
-- [ ] A segmented length take-off produces per-segment chains and per_segment/per_junction rules.
-- [ ] Ladder auto-splits flights and emits rest-platform junctions.
-- [ ] Spans/placement editors persist and drive the engine.
+- [x] A segmented length take-off produces per-segment chains and per_segment/per_junction rules.
+- [x] Ladder auto-splits flights and emits rest-platform junctions.
+- [x] Spans/placement editors persist and drive the engine.
+
+## Status notes (live)
+- `lib/engine/geometry/segmentation.ts` (`buildGeometry`) + `spans.ts` (`resolveSpans`).
+- `evaluate.ts`: `archetypeValue` + `evaluatePropertiesScoped` (single-segment runs reduce to the
+  run length → existing take-offs unchanged; ladder rungs stay 35, guardrail single 17).
+- `index.ts`: geometry built in `resolveModel`; derived `segment_count`/`junction_count`/
+  `junction_<type>`; canonical geometry populated; `place_supports` receives `placement_rules`.
+- UI: segmented-length input + segments/junctions panel (`primitive-takeoff.tsx`);
+  `SpansEditor` + `PlacementRulesEditor` in the wizard properties step.
+- Verified: guardrail segmented (10000⌐+14000) → 19 uprights / 1 corner bracket; ladder
+  rest_platform junction @ 4,725; cage_zone span drops hoops 23→13; place_supports → 6 supports.

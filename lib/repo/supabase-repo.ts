@@ -38,16 +38,79 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     getProject: (id) => getPayload<Project>('project', id),
     listSystems: () => listPayloads<System>('system'),
     getSystem: (id) => getPayload<System>('system', id),
+    async saveSystem(system) {
+      const { error } = await db.from('system').upsert({
+        id: system.id,
+        name: system.name,
+        description: system.description ?? null,
+        primitive_kind: system.primitive.kind,
+        payload: system,
+      });
+      if (error) throw new Error(`system#${system.id}: ${error.message}`);
+      return system;
+    },
     listModels: (systemId) => listPayloadsWhere<Model>('model', 'system_id', systemId),
     getModel: (id) => getPayload<Model>('model', id),
+    async saveModel(model) {
+      const { error } = await db.from('model').upsert({
+        id: model.id, system_id: model.system_id, name: model.name, status: model.status,
+        current_version: model.current_version ?? null, payload: model,
+      });
+      if (error) throw new Error(`model#${model.id}: ${error.message}`);
+      // keep the parent system payload's models[] in step (getSystem reads the payload)
+      const sys = await getPayload<System>('system', model.system_id);
+      if (sys) {
+        const models = sys.models ?? [];
+        const i = models.findIndex((m) => m.id === model.id);
+        const next = i >= 0 ? models.map((m) => (m.id === model.id ? model : m)) : [...models, model];
+        await db.from('system').upsert({ id: sys.id, name: sys.name, description: sys.description ?? null, primitive_kind: sys.primitive.kind, payload: { ...sys, models: next } });
+      }
+      return model;
+    },
     listMaterials: () => listPayloads<Material>('material'),
     getMaterial: (id) => getPayload<Material>('material', id),
+    async saveMaterial(material) {
+      const { error } = await db.from('material').upsert({
+        id: material.id, sku: material.sku, name: material.name, vendor: material.vendor,
+        unit: material.unit, category: material.category ?? null, is_cuttable: material.is_cuttable,
+        payload: material,
+      });
+      if (error) throw new Error(`material#${material.id}: ${error.message}`);
+      return material;
+    },
+    async deleteMaterial(id) {
+      const { error } = await db.from('material').delete().eq('id', id);
+      if (error) throw new Error(`material#${id}: ${error.message}`);
+    },
     listVariants: () => listPayloads<Variant>('variant'),
     getVariant: (id) => getPayload<Variant>('variant', id),
+    async saveVariant(variant) {
+      const { error } = await db.from('variant').upsert({
+        id: variant.id, name: variant.name, status: variant.status,
+        current_version: variant.current_version, payload: variant,
+      });
+      if (error) throw new Error(`variant#${variant.id}: ${error.message}`);
+      return variant;
+    },
+    async deleteVariant(id) {
+      const { error } = await db.from('variant').delete().eq('id', id);
+      if (error) throw new Error(`variant#${id}: ${error.message}`);
+    },
     listSubAssemblies: () => listPayloads<SubAssembly>('sub_assembly'),
     getSubAssembly: (id) => getPayload<SubAssembly>('sub_assembly', id),
     listInventory: () => listPayloads<InventoryItem>('inventory_item'),
     listTakeoffs: (projectId) => listPayloadsWhere<Takeoff>('takeoff', 'project_id', projectId),
     getTakeoff: (id) => getPayload<Takeoff>('takeoff', id),
+    async saveTakeoff(projectId, takeoff) {
+      const { error } = await db.from('takeoff').upsert({
+        id: takeoff.id,
+        project_id: projectId,
+        system_id: takeoff.system_id,
+        model_id: takeoff.model_id,
+        payload: takeoff,
+      });
+      if (error) throw new Error(`takeoff#${takeoff.id}: ${error.message}`);
+      return takeoff;
+    },
   };
 }

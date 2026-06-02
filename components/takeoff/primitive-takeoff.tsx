@@ -5,7 +5,8 @@ import { resolveTakeoff } from '@/lib/engine';
 import { mtoToCsv } from '@/lib/export/csv';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
-import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
+import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
+import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -44,6 +45,7 @@ export function PrimitiveTakeoff({
   iconName = 'post',
   subAssemblies = [],
   attachableSystems = [],
+  persist,
 }: {
   system: System;
   model: Model;
@@ -56,10 +58,26 @@ export function PrimitiveTakeoff({
   iconName?: string;
   subAssemblies?: SubAssembly[];
   attachableSystems?: System[];
+  persist?: PersistTarget;
 }) {
   const rows = system.variants.rows;
   const [variantIdx, setVariantIdx] = useState(initialVariant);
   const [value, setValue] = useState(initial);
+
+  // segmented-length support (only for segmentable length systems)
+  const canSegment = primitive === 'length' && system.primitive.kind === 'length' && system.primitive.segmentable === true;
+  const [segmented, setSegmented] = useState(false);
+  const [segs, setSegs] = useState<{ length: number; junction: string }[]>([
+    { length: 10000, junction: 'corner' },
+    { length: 14000, junction: 'corner' },
+  ]);
+  const primitiveInput = useMemo(() => {
+    if (primitive === 'height') return value;
+    if (canSegment && segmented) {
+      return { mode: 'segmented' as const, segments: segs.map((s, i) => (i < segs.length - 1 ? { length: s.length, junction_after: { type: s.junction } } : { length: s.length })) };
+    }
+    return { mode: 'single' as const, total: value };
+  }, [primitive, value, canSegment, segmented, segs]);
 
   // attachment instances (include + open inputs), keyed by attachment id
   const [attState, setAttState] = useState<Record<string, AttachmentInstance>>(() => {
@@ -89,12 +107,12 @@ export function PrimitiveTakeoff({
         input: {
           criteria_values: criteria,
           modifier_values: {},
-          primitive_input: primitive === 'height' ? value : { mode: 'single', total: value },
+          primitive_input: primitiveInput,
           property_values: {},
           attachments: attachmentInstances,
         },
       }),
-    [system, model, materials, variant, criteria, primitive, value, resolveSubAssembly, resolveAttachedSystem, attachmentInstances],
+    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;
@@ -107,6 +125,25 @@ export function PrimitiveTakeoff({
     if (l.source_sub_assembly) return { text: `⊂ ${saLabel.get(l.source_sub_assembly) ?? 'sub-assembly'}`, color: 'var(--accent)', bg: 'var(--accent-soft)' };
     return null;
   };
+
+  // persistence — save the current inputs + denormalized snapshot + computed MTO
+  const buildTakeoff = (): Takeoff => ({
+    id: persist?.takeoffId ?? 'tko-draft',
+    name: title,
+    system_id: system.id,
+    model_id: model.id,
+    variant_choice: variant,
+    criteria_values: criteria,
+    modifier_values: {},
+    primitive_input: primitiveInput,
+    property_values: {},
+    attachments: attachmentInstances,
+    computed_geometry: result.geometry,
+    mto: result.mto,
+    warnings: result.warnings,
+  });
+  const sig = JSON.stringify({ variantIdx, primitiveInput, attState, mto: result.mto.length, items });
+  const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
   function downloadCsv() {
     const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
@@ -179,17 +216,50 @@ export function PrimitiveTakeoff({
             </div>
           </Section>
 
-          <Section index="03" title={`Primitive · ${primitive}`}>
-            <div className="flex items-center gap-2">
-              <button className="btn" onClick={() => setValue((l) => Math.max(0, l - 1000))} aria-label="decrease">−</button>
-              <input
-                className="input w-[120px] text-center"
-                value={value}
-                onChange={(e) => setValue(Math.max(0, Number(e.target.value) || 0))}
-              />
-              <span className="mono text-[12px] text-ink-3">mm</span>
-              <button className="btn" onClick={() => setValue((l) => l + 1000)} aria-label="increase">+</button>
-            </div>
+          <Section index="03" title={`Primitive · ${primitive}${segmented ? ' · segmented' : ''}`}>
+            {canSegment && (
+              <div className="mb-2.5 flex items-center gap-2">
+                <button onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
+                  <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: segmented ? 'var(--accent)' : 'var(--ink-5)' }}>
+                    <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: segmented ? 'translateX(12px)' : 'none' }} />
+                  </span>
+                  <span className="text-[11px] text-ink-2">Segmented run (corners / splices)</span>
+                </button>
+              </div>
+            )}
+
+            {!segmented ? (
+              <div className="flex items-center gap-2">
+                <button className="btn" onClick={() => setValue((l) => Math.max(0, l - 1000))} aria-label="decrease">−</button>
+                <input
+                  className="input w-[120px] text-center"
+                  value={value}
+                  onChange={(e) => setValue(Math.max(0, Number(e.target.value) || 0))}
+                />
+                <span className="mono text-[12px] text-ink-3">mm</span>
+                <button className="btn" onClick={() => setValue((l) => l + 1000)} aria-label="increase">+</button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {segs.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="mono w-4 text-[10px] text-ink-4">{i + 1}</span>
+                    <input className="input w-[110px]" value={s.length} onChange={(e) => setSegs((arr) => arr.map((x, j) => (j === i ? { ...x, length: Math.max(0, Number(e.target.value) || 0) } : x)))} />
+                    <span className="mono text-[11px] text-ink-3">mm</span>
+                    {i < segs.length - 1 && (
+                      <select className="input text" style={{ fontSize: 11 }} value={s.junction} onChange={(e) => setSegs((arr) => arr.map((x, j) => (j === i ? { ...x, junction: e.target.value } : x)))}>
+                        <option value="corner">⌐ corner</option>
+                        <option value="splice">— splice</option>
+                      </select>
+                    )}
+                    <span className="flex-1" />
+                    {segs.length > 1 && <button className="btn sm danger" onClick={() => setSegs((arr) => arr.filter((_, j) => j !== i))}>×</button>}
+                  </div>
+                ))}
+                <button className="btn sm self-start" onClick={() => setSegs((arr) => [...arr, { length: 6000, junction: 'corner' }])}>+ Add segment</button>
+                <div className="mono text-[11px] text-ink-3">total {segs.reduce((t, s) => t + s.length, 0).toLocaleString()} mm · {segs.length} segments · {segs.length - 1} junction(s)</div>
+              </div>
+            )}
 
             <div className="mt-3.5 rounded border border-line bg-panel-2 p-2.5">
               <div className="uc mb-2">dimension chain</div>
@@ -209,6 +279,31 @@ export function PrimitiveTakeoff({
                 })}
               </div>
             </div>
+
+            {result.geometry.segments && (result.geometry.segments.length > 1 || (result.geometry.junctions?.length ?? 0) > 0) && (
+              <div className="mt-2.5 rounded border border-line bg-panel-2 p-2.5">
+                <div className="uc mb-2">segments &amp; junctions</div>
+                <div className="flex flex-wrap items-stretch gap-1.5">
+                  {result.geometry.segments.map((s, i) => {
+                    const len = s.dimension_chain.steps[s.dimension_chain.steps.length - 1].value;
+                    return (
+                      <div key={s.id} className="rounded border border-line bg-panel p-2" style={{ minWidth: 88 }}>
+                        <div className="uc" style={{ fontSize: 9 }}>seg {i + 1}</div>
+                        <div className="mono text-[14px]">{len.toLocaleString()}</div>
+                        <div className="mono text-[9px] text-ink-3">{s.foot_kind === 'free' ? '○' : '●'}–{s.head_kind === 'free' ? '○' : '●'}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {result.geometry.junctions && result.geometry.junctions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {result.geometry.junctions.map((j) => (
+                      <span key={j.id} className="tag" style={{ color: 'var(--annotation)', background: 'var(--annotation-soft)' }}>{j.type} @ {j.position.toLocaleString()}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {result.warnings.map((w, i) => (
               <div
@@ -362,8 +457,12 @@ export function PrimitiveTakeoff({
                 <div className="mono text-[11px] text-ink-3">{model.name}</div>
               </div>
               <div className="flex items-center gap-2">
+                {persist ? (
+                  <SaveStatus state={save.state} savedAt={save.savedAt} onSave={() => void save.saveNow()} />
+                ) : (
+                  <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+                )}
                 <button className="btn sm" onClick={downloadCsv}>CSV</button>
-                <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
               </div>
             </div>
             {result.mto.map((l, i) => (

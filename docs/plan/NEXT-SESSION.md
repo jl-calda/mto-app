@@ -75,16 +75,35 @@ capture the intent.
 ## What's DONE (verified: build + typecheck + serve + correct computed output)
 - **Brief 01 Foundations** ✅ — full `lib/types/*` data model, engine skeleton→impl, repo
   + seed + Supabase wiring, Tailwind, all routes.
-- **Brief 05 Engine core** ✅ — chain, archetypes (spacing/count/rate/threshold), 5
-  quantity patterns, SKU, consolidation; `deriveRuleContext`; model/rule editor +
-  live-eval pane at `/models/[id]`.
+- **Brief 05 Engine core + model/rule authoring** ✅ — chain, archetypes, 5 quantity patterns,
+  SKU, consolidation, `deriveRuleContext`; `/models/[id]` editor now **editable** (rule X-picker
+  constrained to the system context, qty_kind, applies_when, add/remove materials) with a live
+  pane that reacts to the draft rule; persists via `saveModelAction` → `Repository.saveModel`.
+  (Golden engine unit tests → Brief 12.)
 - **Brief 08 Algorithms** (most) — `pack_stock`/`place_supports`/`cut_from_stock`,
   `algorithm` quantity kind, **cut-demand aggregation → CuttingPlan**.
-- **Brief 07** (partial) — height flight auto-split.
-- **Brief 06** (most) — Projects list + detail; **three live take-offs** via shared
+- **Brief 07 Geometry + segmentation** ✅ — `buildGeometry` (segments/junctions/spans/mount
+  surfaces by primitive kind) + scope-aware property eval (`evaluatePropertiesScoped`); derived
+  segment/junction counts; segmented-length take-off input + segments/junctions panel; SpansEditor
+  + PlacementRulesEditor in the wizard (engine consumes both). Single-segment runs unchanged.
+- **Brief 06 Projects + take-off + CSV** ✅ — Projects list + detail (with stale-snapshot /
+  review / saved badges); **three live take-offs** via shared
   `components/takeoff/primitive-takeoff.tsx` (`/takeoff/{anchors,guardrail,ladder}`, the
-  ladder rewired from static to engine); CSV export.
-- **Brief 03/04 browse** — Materials, Variants, Systems list+detail.
+  ladder rewired from static to engine); CSV export; **take-off persistence** (debounced
+  autosave via `saveTakeoffAction` → `Repository.saveTakeoff`, denormalized snapshot + MTO).
+  (Criteria-driven-defaults *flash* deferred — pairs with editable-criteria/X-picker work.)
+- **Brief 03 Materials + Variants CRUD** ✅ — browse + create/edit/delete through the repo
+  (`save/deleteMaterial`, `save/deleteVariant` + Server Actions); material editor (cuttable +
+  stock_options) and variant common-attributes editor. (Variant version history → Brief 10.)
+- **Brief 02 Visual identifier editor** ✅ — `components/visual-editor.tsx` (none/emoji/icon/upload
+  + clear; click/drop/paste with optimistic objectURL → uploaded URL → rollback); `/api/visuals`
+  (Supabase Storage or data-URL fallback); wired into the material + variant editors. (Wiring into
+  the system-wizard/model-editor headers is a small follow-up.)
+- **Brief 04 Systems + authoring** ✅ — list (+ **New system**) + detail (+ **Edit** +
+  AttachmentsEditor); the **4-step wizard** (`/systems/new`, `/systems/[id]/edit`):
+  primitive · modifiers · variants+matrix+criteria · properties (7 archetypes), persisted via
+  `saveSystemAction` → `Repository.saveSystem`, with a live `deriveRuleContext` preview. New
+  `PropertyInstance.applies_to_variants` gates properties per variant (engine-respected).
 - **Brief 09 Sub-assemblies + attachments** ✅ — sub-assembly inlining (`lib/engine/emit.ts`,
   bound params + `Rule.cut_length_param`) + the ladder→walkway **attachment**
   (`lib/engine/attachments.ts`: 3-bucket inputs, recursive `resolveModel`, suppressions,
@@ -93,14 +112,17 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Finish Brief 06** — editable rules (X-picker UI) + **take-off persistence** (Server
-   Action writing back through the repo; add write methods to the repo interface).
-2. **Brief 04** — the 4-step system authoring **wizard** + properties editor (mutations).
-3. **Brief 03** — materials/variants create/edit/delete mutations.
-4. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
-5. **Brief 10 (v2)** — sub-assembly/variant/model **authoring mutations + version history**
-   (incl. the deferred Brief 09 persistence), greedy→ILP solver swap; then **Brief 11 (v3)**,
-   **Brief 12** (testing/CI/deploy/PDF).
+1. **Brief 12** — **testing/CI** first (the one cross-cutting gap now that all v1/v1.5 features
+   exist): golden engine unit tests (the deferred 05/07 tests — ladder 35 rungs, guardrail
+   segmented 19 uprights, combined cut pool, spans/placement), typecheck+build+test in CI, then
+   deploy/RLS/PDF/perf.
+2. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
+   take-off criteria-driven-defaults flash), greedy→ILP solver swap.
+3. **Brief 11 (v3)** scale/collab (auth UI, realtime, inventory/offcuts, area take-off).
+
+**9 of 12 briefs done** (01–07, 09 + most of 08). Remaining: 08 tail (pack_stock_2d/offcut reuse),
+10 (v2 version history/ILP), 11 (v3 scale), 12 (testing/CI/deploy/PDF). The whole v1/v1.5 feature
+surface is real and engine-verified.
 
 ## How to verify
 ```

@@ -38,8 +38,11 @@ const variants: Variant[] = [
   },
   {
     id: 'var-ss316', name: 'SS316 Coastal', common_attributes: { material_finish: 'ss316' },
-    current_version: 1, status: 'active', used_in_systems: ['sys-guardrail'],
-    versions: [{ version: 1, published_at: 0, changelog: 'Initial', common_attributes: { material_finish: 'ss316' } }],
+    current_version: 2, status: 'active', used_in_systems: ['sys-guardrail'],
+    versions: [
+      { version: 1, published_at: 0, changelog: 'Initial', common_attributes: { material_finish: 'ss316' } },
+      { version: 2, published_at: 0, changelog: 'Add 316L weld spec', common_attributes: { material_finish: 'ss316' } },
+    ],
   },
 ];
 
@@ -180,6 +183,8 @@ const systems: System[] = [
         materials: [
           { id: 'mm-upright', material_id: 'mat-upright', rule: { qty_kind: 'per', per: { kind: 'property', name: 'intermediate' }, applies_when: { variants: [], criteria: {} } } },
           { id: 'mm-railtop', material_id: 'mat-rail-top', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: { variants: [], criteria: {} } } },
+          // per_junction rule: a corner bracket per corner (0 for single-segment runs)
+          { id: 'mm-corner', material_id: 'mat-bracket', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'junction_corner' }, applies_when: { variants: [], criteria: {} } } },
         ],
       },
     ],
@@ -214,6 +219,19 @@ const projects: Project[] = [
         variant_choice: { source_ref: { kind: 'local', name: 'Cage ladder', attributes: { has_cage: true } }, attributes: { has_cage: true } },
         criteria_values: { compliance_code: 'NF E85-016', material_finish: 'anodized' },
         modifier_values: {}, primitive_input: 9200, property_values: { rungs: { spacing: 280 } },
+      },
+      {
+        id: 'tko-guardrail', name: 'East elevation guardrail', system_id: 'sys-guardrail', model_id: 'mdl-guardrail-coastal',
+        // pins var-ss316 @ v1; the library variant is now v2 → "review needed" (stale snapshot)
+        variant_choice: { source_ref: { kind: 'library', variant_id: 'var-ss316', pinned_version: 1 }, snapshot_version: 1, attributes: { material_finish: 'ss316' } },
+        criteria_values: { compliance_code: 'EN_ISO_14122-3', material_finish: 'ss316' },
+        modifier_values: {}, primitive_input: { mode: 'single', total: 24000 }, property_values: {},
+      },
+      {
+        id: 'tko-anchors', name: 'Roof anchor points', system_id: 'sys-anchors', model_id: 'mdl-anchors-ss',
+        variant_choice: { source_ref: { kind: 'local', name: 'Standard', attributes: {} }, attributes: {} },
+        criteria_values: { substrate: 'concrete', compliance_code: 'EN_795' },
+        modifier_values: {}, primitive_input: 12, property_values: {},
       },
     ],
   },

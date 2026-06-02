@@ -36,6 +36,7 @@ export default async function AnchorsTakeoffPage() {
         variant={variant}
         criteria={criteria}
         title="Roof anchor points"
+        persist={{ takeoffId: 'tko-anchors', projectId: 'prj-westfield' }}
       />
     </Shell>
   );

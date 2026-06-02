@@ -29,9 +29,11 @@ import type { HostEvalContext, ResolveDeps, Suppress, TakeoffInput, TraceNode } 
 import type { XRef } from './context';
 import { standardRegistry } from './algorithms/registry';
 import { buildChain, chainValue, chainLength } from './geometry/dimension-chain';
+import { buildGeometry, type GeometryParts } from './geometry/segmentation';
 import {
   appliesWhen,
   evaluateProperties,
+  evaluatePropertiesScoped,
   readPrimitive,
   resolveQuantity,
   variantName,
@@ -127,7 +129,7 @@ function resolveModifierValues(system: System, model: Model, input: TakeoffInput
   return out;
 }
 
-function geometryFrom(chain: CanonicalGeometry['dimension_chain']): CanonicalGeometry {
+function geometryFrom(chain: CanonicalGeometry['dimension_chain'], parts?: GeometryParts): CanonicalGeometry {
   const measured = chain.steps[0]?.value ?? 0;
   const v = (r: ChainRole) => chainValue(chain, r);
   return {
@@ -140,6 +142,12 @@ function geometryFrom(chain: CanonicalGeometry['dimension_chain']): CanonicalGeo
     orientation: 'horizontal',
     is_loop: false,
     dimension_chain: chain,
+    ...(parts && {
+      segments: parts.segments,
+      junctions: parts.junctions,
+      spans: parts.spans.length ? parts.spans : undefined,
+      mount_surfaces: parts.mount_surfaces.length ? parts.mount_surfaces : undefined,
+    }),
   };
 }
 
@@ -153,6 +161,7 @@ type ModelResult = {
   lines: MtoLine[];
   chain: DimensionChain;
   derived: Record<string, number>;
+  geometry: GeometryParts;
   trace: TraceNode[];
   attachmentSummaries: AttachmentSummary[];
 };
@@ -179,7 +188,7 @@ function resolveModel(
   const modifierValues = resolveModifierValues(system, model, input);
   const rawValue = readPrimitive(input.primitive_input);
   const chain = buildChain(system.primitive, rawValue, system.modifiers, modifierValues);
-  const propertyVals = evaluateProperties(system.properties, chain, input.property_values ?? {});
+  const vname = variantName(variant);
   const derived: Record<string, number> = { free_ends_count: 2 };
 
   // height auto-split into flights when the climb exceeds the compliance flight max
@@ -199,8 +208,20 @@ function resolveModel(
       });
     }
   }
+
+  // canonical geometry (segments / junctions / spans / mount surfaces)
+  const geometry = buildGeometry({ primitive: system.primitive, runChain: chain, derived, primitiveInput: input.primitive_input, spanDecls: system.spans });
+  derived.segment_count = geometry.segments.length;
+  derived.junction_count = geometry.junctions.length;
+  for (const j of geometry.junctions) derived[`junction_${j.type}`] = (derived[`junction_${j.type}`] ?? 0) + 1;
+
+  // variant×property gating (authored via the wizard matrix): a property with a
+  // non-empty applies_to_variants only applies to those variants.
+  const activeProperties = system.properties.filter(
+    (p) => !p.applies_to_variants?.length || p.applies_to_variants.includes(vname),
+  );
+  const propertyVals = evaluatePropertiesScoped(activeProperties, geometry, chain, input.property_values ?? {});
   const primitiveCount = system.primitive.kind === 'count' ? rawValue : 0;
-  const vname = variantName(variant);
 
   // raw per-property inputs (for sub-assembly property_ref bindings)
   const propertyInputs: Record<string, Record<string, unknown>> = {};
@@ -238,7 +259,7 @@ function resolveModel(
         trace.push({ label: mm.material_id, detail: 'skip · algorithm not registered' });
         continue;
       }
-      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [] });
+      const out = algo.run({ length: chainLength(chain), stock_options: mat?.stock_options ?? [], placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules });
       algorithmOutputs.set(mm.id, out);
       const aqty = out.fields[algo.outputFields[0]] ?? 0;
       if (aqty <= 0) {
@@ -386,7 +407,7 @@ function resolveModel(
     }
   }
 
-  return { lines, chain, derived, trace, attachmentSummaries };
+  return { lines, chain, derived, geometry, trace, attachmentSummaries };
 }
 
 // ── public API ──────────────────────────────────────────
@@ -457,7 +478,7 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const mto = [...bySku.values()];
 
   return {
-    geometry: geometryFrom(root.chain),
+    geometry: geometryFrom(root.chain, root.geometry),
     chain: root.chain,
     mto,
     cuttingPlans,
@@ -530,7 +551,10 @@ export function deriveRuleContext(system: System, _model?: Model): RuleContext {
     kind: (p.archetype === 'rate' || p.archetype === 'stock' ? 'length' : 'count') as 'count' | 'length',
   }));
   const modifiers = system.modifiers.map((m) => m.name);
-  const derived = ['free_ends_count'];
+  // derived counters the engine exposes — height auto-split adds flights / rest_platforms.
+  const derived = system.primitive.kind === 'height'
+    ? ['free_ends_count', 'flights', 'rest_platforms']
+    : ['free_ends_count'];
   const xrefs: XRef[] = [
     ...properties.map((p): XRef => ({ kind: 'property', name: p.name })),
     ...properties.filter((p) => p.kind === 'length').map((p): XRef => ({ kind: 'property_length', name: p.name })),

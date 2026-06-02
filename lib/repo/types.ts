@@ -19,15 +19,23 @@ export interface Repository {
 
   listSystems(): Promise<System[]>;
   getSystem(id: string): Promise<System | null>;
+  /** Upsert a system (authored via the wizard). */
+  saveSystem(system: System): Promise<System>;
 
   listModels(systemId?: string): Promise<Model[]>;
   getModel(id: string): Promise<Model | null>;
+  /** Upsert a model into its parent system. */
+  saveModel(model: Model): Promise<Model>;
 
   listMaterials(): Promise<Material[]>;
   getMaterial(id: string): Promise<Material | null>;
+  saveMaterial(material: Material): Promise<Material>;
+  deleteMaterial(id: string): Promise<void>;
 
   listVariants(): Promise<Variant[]>;
   getVariant(id: string): Promise<Variant | null>;
+  saveVariant(variant: Variant): Promise<Variant>;
+  deleteVariant(id: string): Promise<void>;
 
   listSubAssemblies(): Promise<SubAssembly[]>;
   getSubAssembly(id: string): Promise<SubAssembly | null>;
@@ -36,4 +44,6 @@ export interface Repository {
 
   listTakeoffs(projectId?: string): Promise<Takeoff[]>;
   getTakeoff(id: string): Promise<Takeoff | null>;
+  /** Upsert a take-off into a project (denormalized VariantSnapshot — a correctness law). */
+  saveTakeoff(projectId: string, takeoff: Takeoff): Promise<Takeoff>;
 }
