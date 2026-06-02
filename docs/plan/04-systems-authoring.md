@@ -1,6 +1,10 @@
 # Brief 04 — Systems + system authoring
 
-**Milestone:** v1 (item 5) + v1.5 wizard (part of item 23) · **Depends on:** 01 · **Parallel:** with 03 · **Status:** not started
+**Milestone:** v1 (item 5) + v1.5 wizard (part of item 23) · **Depends on:** 01 · **Parallel:** with 03 · **Status:** in progress
+
+> Systems list (`/systems`, primitive filter + search) and detail (`/systems/[id]`:
+> variants/modifiers/criteria/properties previews + Models section) are live, wired to
+> `getRepo()`. Next: the 4-step authoring wizard + properties editor (mutations).
 
 ## Owns
 `systems.html` (list + detail with Models section) and `system-edit.html` **wizard steps 1–3 +
