@@ -38,11 +38,31 @@ export function createMemoryRepo(): Repository {
     async getMaterial(id) {
       return seed.materials.find((m) => m.id === id) ?? null;
     },
+    async saveMaterial(material) {
+      const i = seed.materials.findIndex((m) => m.id === material.id);
+      if (i >= 0) seed.materials[i] = material;
+      else seed.materials.push(material);
+      return material;
+    },
+    async deleteMaterial(id) {
+      const i = seed.materials.findIndex((m) => m.id === id);
+      if (i >= 0) seed.materials.splice(i, 1);
+    },
     async listVariants() {
       return seed.variants;
     },
     async getVariant(id) {
       return seed.variants.find((v) => v.id === id) ?? null;
+    },
+    async saveVariant(variant) {
+      const i = seed.variants.findIndex((v) => v.id === variant.id);
+      if (i >= 0) seed.variants[i] = variant;
+      else seed.variants.push(variant);
+      return variant;
+    },
+    async deleteVariant(id) {
+      const i = seed.variants.findIndex((v) => v.id === id);
+      if (i >= 0) seed.variants.splice(i, 1);
     },
     async listSubAssemblies() {
       return seed.subAssemblies;

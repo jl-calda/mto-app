@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
+import { MaterialEditor } from '@/components/materials/material-editor';
 import type { Material } from '@/lib/types';
 
 function counts(items: string[]): Map<string, number> {
@@ -11,10 +12,15 @@ function counts(items: string[]): Map<string, number> {
   return m;
 }
 
+function blankMaterial(): Material {
+  return { id: `mat-${crypto.randomUUID().slice(0, 8)}`, sku: '', name: '', vendor: '', unit: 'ea', category: '', attributes: {}, is_cuttable: false };
+}
+
 export function MaterialsBrowser({ materials }: { materials: Material[] }) {
   const [group, setGroup] = useState<string>('all');
   const [vendor, setVendor] = useState<string>('all');
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<{ material: Material; isNew: boolean } | null>(null);
 
   const groups = useMemo(() => counts(materials.map((m) => m.category ?? 'Uncategorised')), [materials]);
   const vendors = useMemo(() => counts(materials.map((m) => m.vendor)), [materials]);
@@ -37,10 +43,13 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
           <h1 className="m-0 text-[22px] font-semibold">Materials</h1>
           <div className="mt-1 text-[12px] text-ink-3">Global SKU catalogue — referenced by model rules and SKU lookups.</div>
         </div>
-        <div className="flex border-l border-line">
-          <Stat k="SKUs" v={materials.length} />
-          <Stat k="vendors" v={vendors.size} />
-          <Stat k="groups" v={groups.size} />
+        <div className="flex items-center gap-3">
+          <div className="flex border-l border-line">
+            <Stat k="SKUs" v={materials.length} />
+            <Stat k="vendors" v={vendors.size} />
+            <Stat k="groups" v={groups.size} />
+          </div>
+          <button className="btn primary sm" onClick={() => setEditing({ material: blankMaterial(), isNew: true })}>New material</button>
         </div>
       </div>
 
@@ -63,35 +72,49 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
             />
           </div>
 
-          <div className="overflow-hidden rounded-md border border-line bg-panel">
-            <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line bg-panel-2 px-3.5 py-2">
-              {['', 'sku · name', 'group', 'vendor', 'unit', 'cuttable'].map((h, i) => (
-                <div key={i} className="uc">{h}</div>
-              ))}
-            </div>
-            {rows.map((m) => (
-              <div key={m.id} className="grid grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line px-3.5 py-2 last:border-b-0 hover:bg-panel-hover">
-                <Visual visual={m.visual} name={m.name} size={24} rounded={3} />
-                <div className="min-w-0">
-                  <div className="truncate text-[12px]">{m.name}</div>
-                  <div className="mono truncate text-[10px] text-ink-3">{m.sku}</div>
-                </div>
-                <div className="truncate text-[12px] text-ink-2">{m.category ?? '—'}</div>
-                <div className="truncate text-[12px] text-ink-2">{m.vendor}</div>
-                <div className="mono text-[11px] text-ink-3">{m.unit}</div>
-                <div>
-                  {m.is_cuttable ? (
-                    <span className="tag" style={{ color: 'var(--ok)', background: 'var(--ok-soft)' }}>
-                      {m.stock_options?.length ? m.stock_options.join('/') : 'yes'}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-ink-4">—</span>
-                  )}
-                </div>
+          <div className={editing ? 'grid grid-cols-[minmax(0,1fr)_360px] items-start gap-4' : ''}>
+            <div className="min-w-0 overflow-hidden rounded-md border border-line bg-panel">
+              <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line bg-panel-2 px-3.5 py-2">
+                {['', 'sku · name', 'group', 'vendor', 'unit', 'cuttable'].map((h, i) => (
+                  <div key={i} className="uc">{h}</div>
+                ))}
               </div>
-            ))}
-            {rows.length === 0 && (
-              <div className="px-3.5 py-10 text-center text-[12px] text-ink-3">No materials match these filters.</div>
+              {rows.map((m) => {
+                const on = editing && !editing.isNew && editing.material.id === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setEditing({ material: m, isNew: false })}
+                    className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line px-3.5 py-2 text-left last:border-b-0 hover:bg-panel-hover"
+                    style={{ background: on ? 'var(--selected)' : undefined }}
+                  >
+                    <Visual visual={m.visual} name={m.name} size={24} rounded={3} />
+                    <div className="min-w-0">
+                      <div className="truncate text-[12px]">{m.name}</div>
+                      <div className="mono truncate text-[10px] text-ink-3">{m.sku}</div>
+                    </div>
+                    <div className="truncate text-[12px] text-ink-2">{m.category ?? '—'}</div>
+                    <div className="truncate text-[12px] text-ink-2">{m.vendor}</div>
+                    <div className="mono text-[11px] text-ink-3">{m.unit}</div>
+                    <div>
+                      {m.is_cuttable ? (
+                        <span className="tag" style={{ color: 'var(--ok)', background: 'var(--ok-soft)' }}>
+                          {m.stock_options?.length ? m.stock_options.join('/') : 'yes'}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-ink-4">—</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              {rows.length === 0 && (
+                <div className="px-3.5 py-10 text-center text-[12px] text-ink-3">No materials match these filters.</div>
+              )}
+            </div>
+
+            {editing && (
+              <MaterialEditor key={editing.material.id} material={editing.material} isNew={editing.isNew} onClose={() => setEditing(null)} />
             )}
           </div>
         </section>

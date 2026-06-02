@@ -53,8 +53,33 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
     getModel: (id) => getPayload<Model>('model', id),
     listMaterials: () => listPayloads<Material>('material'),
     getMaterial: (id) => getPayload<Material>('material', id),
+    async saveMaterial(material) {
+      const { error } = await db.from('material').upsert({
+        id: material.id, sku: material.sku, name: material.name, vendor: material.vendor,
+        unit: material.unit, category: material.category ?? null, is_cuttable: material.is_cuttable,
+        payload: material,
+      });
+      if (error) throw new Error(`material#${material.id}: ${error.message}`);
+      return material;
+    },
+    async deleteMaterial(id) {
+      const { error } = await db.from('material').delete().eq('id', id);
+      if (error) throw new Error(`material#${id}: ${error.message}`);
+    },
     listVariants: () => listPayloads<Variant>('variant'),
     getVariant: (id) => getPayload<Variant>('variant', id),
+    async saveVariant(variant) {
+      const { error } = await db.from('variant').upsert({
+        id: variant.id, name: variant.name, status: variant.status,
+        current_version: variant.current_version, payload: variant,
+      });
+      if (error) throw new Error(`variant#${variant.id}: ${error.message}`);
+      return variant;
+    },
+    async deleteVariant(id) {
+      const { error } = await db.from('variant').delete().eq('id', id);
+      if (error) throw new Error(`variant#${id}: ${error.message}`);
+    },
     listSubAssemblies: () => listPayloads<SubAssembly>('sub_assembly'),
     getSubAssembly: (id) => getPayload<SubAssembly>('sub_assembly', id),
     listInventory: () => listPayloads<InventoryItem>('inventory_item'),

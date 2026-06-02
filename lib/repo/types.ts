@@ -27,9 +27,13 @@ export interface Repository {
 
   listMaterials(): Promise<Material[]>;
   getMaterial(id: string): Promise<Material | null>;
+  saveMaterial(material: Material): Promise<Material>;
+  deleteMaterial(id: string): Promise<void>;
 
   listVariants(): Promise<Variant[]>;
   getVariant(id: string): Promise<Variant | null>;
+  saveVariant(variant: Variant): Promise<Variant>;
+  deleteVariant(id: string): Promise<void>;
 
   listSubAssemblies(): Promise<SubAssembly[]>;
   getSubAssembly(id: string): Promise<SubAssembly | null>;
