@@ -214,6 +214,8 @@ const systems: System[] = [
 const inventory: InventoryItem[] = [
   { id: 'inv-1', material_id: 'mat-stile', length: 3000, quantity: 4, origin: { kind: 'purchased', purchase_order: 'PO-2291', purchased_at: 0 }, status: 'available' },
   { id: 'inv-2', material_id: 'mat-rail-top', length: 1850, quantity: 1, origin: { kind: 'offcut', source_takeoff_id: 'tko-guardrail', source_stock_id: 'st-7' }, status: 'available' },
+  { id: 'inv-3', material_id: 'mat-lbar', length: 4000, quantity: 1, origin: { kind: 'offcut', source_takeoff_id: 'tko-ladder', source_stock_id: 'st-3' }, status: 'available' },
+  { id: 'inv-4', material_id: 'mat-rail-top', length: 2400, quantity: 2, origin: { kind: 'offcut', source_takeoff_id: 'tko-guardrail', source_stock_id: 'st-9' }, status: 'reserved', reserved_for_takeoff_id: 'tko-guardrail' },
 ];
 
 const projects: Project[] = [

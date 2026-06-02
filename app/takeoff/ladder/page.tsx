@@ -13,6 +13,7 @@ export default async function LadderTakeoffPage() {
   const materials = await repo.listMaterials();
   const subAssemblies = await repo.listSubAssemblies();
   const allSystems = await repo.listSystems();
+  const inventory = await repo.listInventory();
   const model = models[0];
 
   if (!system || !model) {
@@ -54,6 +55,7 @@ export default async function LadderTakeoffPage() {
         iconName="ladder"
         subAssemblies={subAssemblies}
         attachableSystems={attachableSystems}
+        inventory={inventory}
         persist={{ takeoffId: 'tko-ladder', projectId: 'prj-westfield' }}
       />
     </Shell>

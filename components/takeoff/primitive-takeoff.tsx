@@ -7,7 +7,7 @@ import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
 import { CuttingDiagram } from '@/components/takeoff/CuttingDiagram';
-import type { AttachmentInstance, ChainRole, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
+import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -46,6 +46,7 @@ export function PrimitiveTakeoff({
   iconName = 'post',
   subAssemblies = [],
   attachableSystems = [],
+  inventory = [],
   persist,
 }: {
   system: System;
@@ -59,6 +60,7 @@ export function PrimitiveTakeoff({
   iconName?: string;
   subAssemblies?: SubAssembly[];
   attachableSystems?: System[];
+  inventory?: InventoryItem[];
   persist?: PersistTarget;
 }) {
   const rows = system.variants.rows;
@@ -111,6 +113,7 @@ export function PrimitiveTakeoff({
         materials,
         resolveSubAssembly,
         resolveAttachedSystem,
+        inventory,
         input: {
           criteria_values: criteria,
           modifier_values: {},
@@ -120,7 +123,7 @@ export function PrimitiveTakeoff({
           chain_overrides: Object.keys(chainOverrides).length ? chainOverrides : undefined,
         },
       }),
-    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances, chainOverrides],
+    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances, chainOverrides, inventory],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;

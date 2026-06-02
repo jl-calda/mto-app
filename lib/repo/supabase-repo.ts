@@ -107,6 +107,14 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
       return sa;
     },
     listInventory: () => listPayloads<InventoryItem>('inventory_item'),
+    async saveInventoryItem(item) {
+      const { error } = await db.from('inventory_item').upsert({
+        id: item.id, material_id: item.material_id, length: item.length ?? null,
+        quantity: item.quantity ?? null, status: item.status, payload: item,
+      });
+      if (error) throw new Error(`inventory_item#${item.id}: ${error.message}`);
+      return item;
+    },
     listTakeoffs: (projectId) => listPayloadsWhere<Takeoff>('takeoff', 'project_id', projectId),
     getTakeoff: (id) => getPayload<Takeoff>('takeoff', id),
     async saveTakeoff(projectId, takeoff) {

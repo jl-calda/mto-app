@@ -22,7 +22,8 @@ export function buildChain(
     source: 'user_input',
     from: [`primitive.${primitive.kind}`],
   };
-  if (primitive.kind === 'count') return { steps: [input] };
+  // count / area / volume have only an input step (no length adjust→constrain→quantize chain).
+  if (primitive.kind === 'count' || primitive.kind === 'area' || primitive.kind === 'volume') return { steps: [input] };
 
   // adjusted: sum additive geometric distance modifiers (offsets, extensions, overshoot)
   const additive = modifiers.filter(

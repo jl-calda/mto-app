@@ -16,6 +16,7 @@ import type {
   ChainRole,
   CuttingPlan,
   DimensionChain,
+  InventoryItem,
   Material,
   Model,
   MtoLine,
@@ -65,6 +66,8 @@ export type ResolveTakeoffArgs = {
   resolveAttachedSystem?: (id: string) => System | undefined;
   /** Resolve a sub-assembly definition by id (for model + nested uses). */
   resolveSubAssembly?: (id: string) => SubAssembly | undefined;
+  /** Available inventory — retained offcuts are consulted by cut_from_stock (Brief 11). */
+  inventory?: InventoryItem[];
   algorithms?: AlgorithmRegistry;
 };
 
@@ -448,6 +451,16 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
   const root = resolveModel(system, model, variant, input, deps, registry, warnings, [], undefined, 0);
   const lines = root.lines;
 
+  // available retained offcuts per material (cross-project reuse — Brief 11)
+  const offcutsByMat = new Map<string, number[]>();
+  for (const inv of args.inventory ?? []) {
+    if (inv.origin?.kind === 'offcut' && inv.status === 'available' && inv.length) {
+      const arr = offcutsByMat.get(inv.material_id) ?? [];
+      for (let i = 0; i < (inv.quantity ?? 1); i++) arr.push(inv.length);
+      offcutsByMat.set(inv.material_id, arr);
+    }
+  }
+
   // aggregate cut demands per cuttable material → cut_from_stock → stock lines.
   // ONE shared pool: host + sub-assemblies + attachments + connection materials.
   const cuttingPlans: CuttingPlan[] = [];
@@ -464,7 +477,9 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
       warnings.push({ level: 'warning', source: 'algorithm', type: 'cut_too_long', message: `${mat?.name ?? matId}: ${tooLong} cut(s) exceed the ${maxStock.toLocaleString()} mm stock length`, affected_fields: [matId] });
     }
     if (cuttable.length === 0) continue;
-    const out = cutAlgo?.run({ demands: cuttable, stock_options: mat?.stock_options ?? [], cut_allowance: allowance });
+    const offcuts = offcutsByMat.get(matId) ?? [];
+    const out = cutAlgo?.run({ demands: cuttable, stock_options: mat?.stock_options ?? [], cut_allowance: allowance, offcuts });
+    const offcutsUsed = out?.fields.offcuts_used ?? 0;
     if (!out) continue;
     const stocks = out.fields.stocks ?? 0;
     const detail = out.detail as { plan: { stock_length: number; cuts: number[]; offcut: number }[] };
@@ -489,8 +504,11 @@ export function resolveTakeoff(args: ResolveTakeoffArgs): TakeoffResult {
         unit: mat?.unit ?? 'ea',
         source_material_id: matId,
         cutting_plan: plan,
-        notes: `${cuttable.length} cut(s)`,
+        notes: `${cuttable.length} cut(s)${offcutsUsed > 0 ? ` · ${offcutsUsed} from offcut` : ''}`,
       });
+    }
+    if (offcutsUsed > 0) {
+      warnings.push({ level: 'info', source: 'inventory', message: `${mat?.name ?? matId}: reused ${offcutsUsed} retained offcut(s) before buying new stock`, affected_fields: [matId] });
     }
     if (out.fields.total_offcut > (mat?.stock_options?.[0] ?? 0)) {
       warnings.push({ level: 'info', source: 'algorithm', type: 'high_wastage', message: `${mat?.name ?? matId}: ${out.fields.total_offcut.toLocaleString()} mm offcut across ${stocks} stock(s)`, affected_fields: [matId] });

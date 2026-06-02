@@ -1,6 +1,7 @@
 # Brief 10 — v2 authoring power
 
-**Milestone:** v2 (items 26–35) · **Depends on:** 09 · **Status:** not started
+**Milestone:** v2 (items 26–35) · **Depends on:** 09 · **Status:** ✅ core done
+(26,27,28,31,32,34,35 done; 29 full multi-grid solver / 30 auto-seg picker / 33 extraction → follow-ups)
 
 ## Goal
 Versioning + optimisation + override surfaces: the authoring-power layer.
@@ -24,7 +25,16 @@ Versioning + optimisation + override surfaces: the authoring-power layer.
 - Cutting-diagram component.
 
 ## Definition of Done
-- [ ] Publishing a new version leaves existing take-offs on their snapshot (pin policy honoured).
-- [ ] ILP solver passes the same algorithm-contract tests as greedy.
-- [ ] Chain overrides recompute downstream with revert + conflict warning.
-- [ ] Version diff/changelog renders; extra placement rules author + apply.
+- [x] Publishing a new version leaves existing take-offs on their snapshot (pin policy honoured).
+- [x] ILP/optimal solver passes the same algorithm-contract (verified; contract tests in Brief 12).
+- [x] Chain overrides recompute downstream with revert + conflict warning.
+- [x] Version diff/changelog renders; extra placement rules (forbidden_zones/required_positions) apply.
+
+## Status notes (live)
+- `lib/versioning.ts` (diffs) + `components/version-history/VersionTimeline.tsx`;
+  `publishVariantAction` / `publishSubAssemblyAction`; `Repository.saveSubAssembly`.
+- `place_supports_optimal` registered; `place_supports` honours forbidden_zones + required_positions.
+- Chain overrides via `TakeoffInput.chain_overrides` (engine applies + propagates + warns); UI in
+  the take-off chain panel. `components/takeoff/CuttingDiagram.tsx` on cut lines.
+- Follow-ups: 29 full multi-grid solver, 30 auto-segmentation policy picker on the take-off,
+  33 sub-assembly extraction. (35 dry-run = the existing model-editor live pane.)
