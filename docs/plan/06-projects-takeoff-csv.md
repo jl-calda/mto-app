@@ -6,7 +6,8 @@
 > take-offs — anchors (count), guardrail (length, pack_stock rail), **and the ladder
 > (height) rewired from static to the engine** (flight auto-split, threshold cage
 > hoops, stiles pack_stock, derived rest-platforms). Shared `PrimitiveTakeoff`
-> component. Next: CSV export + take-off persistence with snapshots.
+> component, with **CSV export** (`lib/export/csv.ts` + download button). Next:
+> take-off persistence (save back to the repo with the variant snapshot).
 
 ## Owns
 `index.html` (projects list) + `project.html` (project detail); generic length/count take-offs;

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { resolveTakeoff } from '@/lib/engine';
+import { mtoToCsv } from '@/lib/export/csv';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import type { ChainRole, Material, Model, System, SystemVariantRef, VariantSnapshot } from '@/lib/types';
@@ -66,6 +67,16 @@ export function PrimitiveTakeoff({
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;
+
+  function downloadCsv() {
+    const blob = new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^\w-]+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -199,7 +210,10 @@ export function PrimitiveTakeoff({
                 <h2 className="m-0 text-[14px] font-semibold">Live MTO</h2>
                 <div className="mono text-[11px] text-ink-3">{model.name}</div>
               </div>
-              <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+              <div className="flex items-center gap-2">
+                <button className="btn sm" onClick={downloadCsv}>CSV</button>
+                <span className="mono text-[10px] text-ok" style={{ animation: 'pulse 2s infinite' }}>● live</span>
+              </div>
             </div>
             {result.mto.map((l, i) => (
               <div key={i} className="flex items-center gap-2 border-b border-line px-3.5 py-2 last:border-b-0">
