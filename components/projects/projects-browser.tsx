@@ -42,7 +42,7 @@ export function ProjectsBrowser({ projects }: { projects: Project[] }) {
             style={{ fontFamily: 'var(--font-sans)' }}
           />
           <span className="flex-1" />
-          <button className="btn primary sm">New project</button>
+          <Link href="/projects/new" className="btn primary sm">New project</Link>
         </div>
 
         <div className="overflow-hidden rounded-md border border-line bg-panel">

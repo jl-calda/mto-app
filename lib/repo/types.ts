@@ -16,6 +16,7 @@ import type {
 export interface Repository {
   listProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | null>;
+  saveProject(project: Project): Promise<Project>;
 
   listSystems(): Promise<System[]>;
   getSystem(id: string): Promise<System | null>;
