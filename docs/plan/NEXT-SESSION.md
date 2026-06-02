@@ -87,7 +87,12 @@ capture the intent.
   ladder rewired from static to engine); CSV export; **take-off persistence** (debounced
   autosave via `saveTakeoffAction` → `Repository.saveTakeoff`, denormalized snapshot + MTO).
   (Criteria-driven-defaults *flash* deferred — pairs with editable-criteria/X-picker work.)
-- **Brief 03/04 browse** — Materials, Variants, Systems list+detail.
+- **Brief 03 browse** — Materials, Variants list+detail.
+- **Brief 04 Systems + authoring** ✅ — list (+ **New system**) + detail (+ **Edit** +
+  AttachmentsEditor); the **4-step wizard** (`/systems/new`, `/systems/[id]/edit`):
+  primitive · modifiers · variants+matrix+criteria · properties (7 archetypes), persisted via
+  `saveSystemAction` → `Repository.saveSystem`, with a live `deriveRuleContext` preview. New
+  `PropertyInstance.applies_to_variants` gates properties per variant (engine-respected).
 - **Brief 09 Sub-assemblies + attachments** ✅ — sub-assembly inlining (`lib/engine/emit.ts`,
   bound params + `Rule.cut_length_param`) + the ladder→walkway **attachment**
   (`lib/engine/attachments.ts`: 3-bucket inputs, recursive `resolveModel`, suppressions,
@@ -96,14 +101,15 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 04** — the 4-step system authoring **wizard** + properties editor (mutations);
-   includes the rule **X-picker UI** (making rules editable) + editable criteria, which unlocks
-   Brief 06's deferred criteria-driven-defaults flash.
-2. **Brief 03** — materials/variants create/edit/delete mutations.
+1. **Brief 03** — materials/variants create/edit/delete **mutations** (browse screens exist;
+   add `saveMaterial`/`saveVariant` to the repo + authoring forms, mirroring the Brief 04 wizard).
+2. **Brief 05 finish** — the rule **X-picker UI** (make model rules editable: qty_kind, per-target
+   X from the `deriveRuleContext` xrefs, applies_when) + editable criteria → unlocks Brief 06's
+   criteria-driven-defaults flash.
 3. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload).
-4. **Brief 10 (v2)** — sub-assembly/variant/model **authoring mutations + version history**
-   (incl. the deferred Brief 09 persistence), greedy→ILP solver swap; then **Brief 11 (v3)**,
-   **Brief 12** (testing/CI/deploy/PDF).
+4. **Brief 07** — full segmentation/spans/placement editors (engine + UI).
+5. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence),
+   greedy→ILP solver swap; then **Brief 11 (v3)**, **Brief 12** (testing/CI/deploy/PDF).
 
 ## How to verify
 ```
