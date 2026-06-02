@@ -75,9 +75,11 @@ capture the intent.
 ## What's DONE (verified: build + typecheck + serve + correct computed output)
 - **Brief 01 Foundations** ✅ — full `lib/types/*` data model, engine skeleton→impl, repo
   + seed + Supabase wiring, Tailwind, all routes.
-- **Brief 05 Engine core** ✅ — chain, archetypes (spacing/count/rate/threshold), 5
-  quantity patterns, SKU, consolidation; `deriveRuleContext`; model/rule editor +
-  live-eval pane at `/models/[id]`.
+- **Brief 05 Engine core + model/rule authoring** ✅ — chain, archetypes, 5 quantity patterns,
+  SKU, consolidation, `deriveRuleContext`; `/models/[id]` editor now **editable** (rule X-picker
+  constrained to the system context, qty_kind, applies_when, add/remove materials) with a live
+  pane that reacts to the draft rule; persists via `saveModelAction` → `Repository.saveModel`.
+  (Golden engine unit tests → Brief 12.)
 - **Brief 08 Algorithms** (most) — `pack_stock`/`place_supports`/`cut_from_stock`,
   `algorithm` quantity kind, **cut-demand aggregation → CuttingPlan**.
 - **Brief 07** (partial) — height flight auto-split.
@@ -103,15 +105,14 @@ capture the intent.
   **mutations/persistence** + version history → Brief 10.) **5 of 6 nav sections real.**
 
 ## What's NEXT (priority order)
-1. **Brief 05 finish** — the rule **X-picker UI** (make model rules editable: qty_kind, per-target
-   X from the `deriveRuleContext` xrefs, applies_when, add/remove model materials) + editable
-   criteria → unlocks Brief 06's criteria-driven-defaults flash. (`deriveRuleContext` + a live
-   preview already exist; add a `saveModel` repo mutation + Server Action.)
-2. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload), wired into the
-   material/variant/system editors (they currently have no visual picker).
-3. **Brief 07** — full segmentation/spans/placement editors (engine + UI).
-4. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence),
-   greedy→ILP solver swap; then **Brief 11 (v3)**, **Brief 12** (testing/CI/deploy/PDF).
+1. **Brief 02** — Visual identifier editor (paste/drop/emoji/icon/upload), wired into the
+   material/variant/system/model editors (they have no visual picker yet — `Visual` is display-only).
+2. **Brief 07** — full segmentation/spans/placement editors (engine + UI): multi-segment runs,
+   junctions, spans, `place_supports` placement-rules editor.
+3. **Brief 10 (v2)** — authoring **version history** (incl. deferred Brief 09 persistence + the
+   take-off criteria-driven-defaults flash), greedy→ILP solver swap.
+4. **Brief 11 (v3)** scale/collab, then **Brief 12** (testing/CI/deploy/RLS/PDF/perf — incl. the
+   deferred golden engine unit tests).
 
 ## How to verify
 ```
