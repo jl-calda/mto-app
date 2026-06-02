@@ -8,9 +8,13 @@ import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Shell, Stat, PrimitiveBadge, Icon } from '@/components/chrome';
 import { Visual } from '@/components/visual';
-import type { MtoLine, Visual as VisualT } from '@/lib/types';
+import type { Visual as VisualT } from '@/lib/types';
 
-const mto: MtoLine[] = [
+// Local shape for this screen's mock rows. Brief 06 rewires the screen to the
+// engine, which emits the full `MtoLine` from '@/lib/types'.
+type LadderMtoRow = { sku: string; name: string; qty: number; unit: string; rule: string; formula: string };
+
+const mto: LadderMtoRow[] = [
   { sku: 'VEC-LDR-S-3000-AN', name: 'Ladder stile · 3000 mm · anodized', qty: 8, unit: 'ea', rule: 'stiles', formula: 'pack_stock(9700, [3000]).pieces × 2 stiles' },
   { sku: 'VEC-LDR-RUNG-AN', name: 'Rung · anodized', qty: 33, unit: 'ea', rule: 'rungs', formula: 'ceil(9450 / 280) + 1' },
   { sku: 'VEC-LDR-CAGE-AN', name: 'Cage hoop · anodized', qty: 24, unit: 'ea', rule: 'cage_hoops', formula: 'ceil((H-3000)/280) (above 3 m threshold)' },
@@ -21,7 +25,7 @@ const mto: MtoLine[] = [
 ];
 
 // materials contributed by the attached Top-walkway system (WG-Coastal model)
-const walkwayMto: MtoLine[] = [
+const walkwayMto: LadderMtoRow[] = [
   { sku: 'VEC-WLK-GR-6000', name: 'Walkway grating · 6000 mm', qty: 2, unit: 'ea', rule: 'deck_packing', formula: 'pack_stock(12000, [6000])' },
   { sku: 'VEC-UPR-FS-AN', name: 'Guardrail upright · floor fix', qty: 9, unit: 'ea', rule: 'intermediate', formula: 'ceil(12000 / 1500) + 1' },
   { sku: 'VEC-RAIL-T-3000-AN', name: 'Top rail · 3000 mm · anodized', qty: 5, unit: 'ea', rule: 'rail_top', formula: 'pack_stock(12000, [3000])' },
