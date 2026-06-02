@@ -2,9 +2,10 @@
 
 **Milestone:** v1 (items 3, 4) · **Depends on:** 01 · **Parallel:** yes · **Status:** in progress
 
-> Materials catalogue (browse: group/vendor filters, search, cuttable/stock-option
-> cells) is live at `/materials`, wired to `getRepo()`. Next: material detail/edit +
-> create/delete mutations, then the Variants list + common-attributes editor.
+> Browse complete: Materials catalogue (`/materials`, filters + search + cuttable cells)
+> and Variants library (`/variants`, split-pane list + common-attributes detail + used-in
+> + snapshot-semantics note; version-history stubbed for Brief 10). Next: create/edit/
+> delete mutations (server actions) for both.
 
 ## Goal
 `materials.html` + `variants.html` **common-attributes / CRUD only**. Variant version history,
