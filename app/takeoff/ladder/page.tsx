@@ -54,6 +54,8 @@ export default async function LadderTakeoffPage() {
         subAssemblies={subAssemblies}
         attachableSystems={attachableSystems}
         inventory={inventory}
+        initialProps={takeoff?.property_values}
+        initialModifiers={takeoff?.modifier_values}
         persist={{ takeoffId: 'tko-ladder', projectId: 'prj-westfield' }}
       />
     </Shell>
