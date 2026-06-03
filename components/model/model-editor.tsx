@@ -149,9 +149,9 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between gap-3 border-b border-line pb-3.5">
-        <div className="flex items-start gap-3">
-          <div className="w-[300px]"><VisualEditor value={model.visual} name={model.name} onChange={(v) => setModel((m) => ({ ...m, visual: v }))} /></div>
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="w-full sm:w-[300px] sm:shrink-0"><VisualEditor value={model.visual} name={model.name} onChange={(v) => setModel((m) => ({ ...m, visual: v }))} /></div>
           <div>
             <div className="flex items-center gap-1.5">
               <input className="input text text-[18px] font-semibold" style={{ height: 'auto', padding: '2px 8px' }} value={model.name} onChange={(e) => setModel((m) => ({ ...m, name: e.target.value }))} />
@@ -160,7 +160,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
             <div className="mono mt-1 text-[11px] text-ink-3">{system.name} · {model.status} · {model.materials.length} materials</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
           {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
           <Select value={model.status} options={['draft', 'published', 'deprecated'] as const} onChange={(v) => setModel((m) => ({ ...m, status: v }))} />
@@ -178,7 +178,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_460px] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_460px]">
         {/* material list */}
         <section className="overflow-hidden rounded-md border border-line bg-panel">
           <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
@@ -211,7 +211,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
         </section>
 
         {/* rule editor + live eval */}
-        <aside className="sticky top-[60px] flex flex-col gap-3">
+        <aside className="flex flex-col gap-3 lg:sticky lg:top-[60px]">
           {selected && r && (
             <>
               <div className="overflow-hidden rounded-md border border-line bg-panel">
@@ -232,7 +232,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                       })}
                     </div>
                     {system.criteria.length > 0 && (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {system.criteria.map((c) => {
                           const known = ctx.criteria[c.library_id] ?? [];
                           const sel = r.applies_when.criteria[c.library_id] ?? [];
@@ -257,7 +257,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                         <button key={k} onClick={() => setQtyKind(k)} className="rounded px-2 py-0.5 text-[11px]" style={{ background: r.qty_kind === k ? 'var(--accent)' : 'var(--bg-2)', color: r.qty_kind === k ? '#fff' : 'var(--ink-2)' }}>{k}</button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {(r.qty_kind === 'fixed' || r.qty_kind === 'per' || r.qty_kind === 'per_length') && (
                         <Field label={r.qty_kind === 'per_length' ? 'qty per metre' : 'qty'}><NumberInput value={r.qty ?? 1} onChange={(v) => updateRule({ qty: v })} /></Field>
                       )}
@@ -289,7 +289,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                 </header>
                 <div className="p-3.5">
                   <div className="uc mb-2">sample inputs</div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Field label="variant">
                       <select className="input text w-full" value={variant} onChange={(e) => setVariant(e.target.value)} style={{ fontSize: 12 }}>
                         {system.variants.rows.map((row, i) => <option key={i} value={rowLabel(row)}>{rowLabel(row)}</option>)}

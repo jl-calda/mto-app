@@ -28,7 +28,7 @@ export function NewTakeoffPicker({ projectId, projectName, systems }: { projectI
       <div className="py-4">
         <div className="uc mb-2">Pick a system to take off from</div>
         {error && <div className="mono mb-2 text-[11px] text-err">{error}</div>}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {systems.map((s) => {
             const k = s.primitive.kind;
             return (

@@ -27,7 +27,7 @@ export function PlacementRulesEditor({ system, setSystem }: { system: System; se
           return (
             <div key={i} className="rounded border border-line p-2.5">
               <div className="mb-2 mono text-[12px] font-semibold">{p.name}</div>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                 <Field label="max spacing"><NumberInput value={r.max_spacing ?? 0} onChange={(v) => setRules(i, { max_spacing: v })} /></Field>
                 <Field label="min spacing"><NumberInput value={r.min_spacing ?? 0} onChange={(v) => setRules(i, { min_spacing: v })} /></Field>
                 <Field label="foot clearance"><NumberInput value={r.end_clearance_foot?.max ?? 0} onChange={(v) => clearance(i, 'end_clearance_foot', v)} /></Field>

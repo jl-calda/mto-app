@@ -73,15 +73,15 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       {/* header */}
-      <div className="flex items-end justify-between gap-4 border-b border-line pb-3.5">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="w-[300px] shrink-0"><VisualEditor value={system.visual} name={system.name} onChange={(v) => setSystem((s) => ({ ...s, visual: v }))} /></div>
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="w-full sm:w-[300px] sm:shrink-0"><VisualEditor value={system.visual} name={system.name} onChange={(v) => setSystem((s) => ({ ...s, visual: v }))} /></div>
           <div className="min-w-0 flex-1">
             <input className="input text w-full max-w-[480px] text-[18px] font-semibold" style={{ height: 'auto', padding: '4px 8px' }} value={system.name} onChange={(e) => setSystem((s) => ({ ...s, name: e.target.value }))} placeholder="System name" />
             <input className="input text mt-1.5 w-full max-w-[480px]" value={system.description ?? ''} onChange={(e) => setSystem((s) => ({ ...s, description: e.target.value }))} placeholder="Description (optional)" />
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
           {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
           <Link href={isNew ? '/systems' : `/systems/${system.id}`} className="btn sm">Cancel</Link>
@@ -123,7 +123,7 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
       {/* deriveRuleContext preview — the authoring↔runtime contract the X-picker consumes */}
       <div className="pb-10 pt-2">
         <Card title="Rule context preview — SYSTEM_CTX the model/rule X-picker will offer">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <CtxList label="variants" items={ctx.variants} />
             <CtxList label="criteria" items={Object.keys(ctx.criteria)} />
             <CtxList label="properties" items={ctx.properties.map((p) => `${p.name} · ${p.archetype}`)} />

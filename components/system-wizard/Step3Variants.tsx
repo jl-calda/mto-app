@@ -47,13 +47,13 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
   const selRow = rows[sel];
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-4">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="flex flex-col gap-3">
         {/* attribute columns */}
         <Card title={`Attribute columns — ${cols.length}`} action={<button type="button" className="btn sm" onClick={addCol}>Add column</button>}>
           <div className="flex flex-col gap-2">
             {cols.map((c, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)_auto] items-end gap-2">
+              <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px_minmax(0,1fr)_auto] sm:items-end">
                 <Field label="name"><TextInput mono value={c.name} onChange={(v) => updateCol(i, { name: v })} /></Field>
                 <Field label="type"><Select value={c.type.kind as ColKind} options={COL_KINDS} onChange={(v) => updateCol(i, { type: blankColType(v) })} /></Field>
                 {c.type.kind === 'enum'
@@ -78,7 +78,7 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
                   <button type="button" className="btn sm danger" onClick={() => removeRow(i)}>×</button>
                 </div>
                 {r.kind === 'local' && cols.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {cols.map((c) => (
                       <Field key={c.name} label={c.name}>
                         {c.type.kind === 'bool'
@@ -100,7 +100,7 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
         <Card title={`Criteria — ${system.criteria.length}`} action={<button type="button" className="btn sm" onClick={addCrit}>Add criterion</button>}>
           <div className="flex flex-col gap-2">
             {system.criteria.map((c, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] items-end gap-2">
+              <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end">
                 <Field label="library id"><TextInput mono value={c.library_id} onChange={(v) => updateCrit(i, { library_id: v })} /></Field>
                 <Field label="default"><TextInput value={String(c.default_value ?? '')} onChange={(v) => updateCrit(i, { default_value: v })} /></Field>
                 <button type="button" className="btn sm danger" onClick={() => removeCrit(i)}>×</button>
@@ -112,7 +112,7 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
       </div>
 
       {/* sticky variant inspector */}
-      <aside className="sticky top-[60px]">
+      <aside className="lg:sticky lg:top-[60px]">
         <Card title="Variant inspector">
           {selRow ? (
             <div className="flex flex-col gap-2.5">

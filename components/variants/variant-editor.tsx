@@ -91,7 +91,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
       <div className="overflow-hidden rounded-md border border-line bg-panel">
         <div className="flex flex-col gap-2.5 p-3.5">
           <Field label="visual"><VisualEditor value={visual} name={name} onChange={setVisual} /></Field>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="name"><TextInput value={name} onChange={setName} /></Field>
             <Field label="status"><Select value={status} options={STATUS} onChange={setStatus} /></Field>
           </div>

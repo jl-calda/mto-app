@@ -305,9 +305,9 @@ function EditorView({ sub, materials, matById, tab, setTab }: { sub: SubAssembly
 type ParamEdit = { onChange: (idx: number, patch: Partial<ParameterDef>) => void; onRemove: (idx: number) => void };
 function ParameterTable({ params, edit }: { params: ParameterDef[]; edit?: ParamEdit }) {
   if (params.length === 0 && !edit) return <div className="py-2 text-[12px] text-ink-3">No parameters.</div>;
-  const cols = edit ? 'grid grid-cols-[minmax(0,1fr)_110px_80px_90px_36px]' : 'grid grid-cols-[minmax(0,1fr)_110px_70px_80px]';
+  const cols = edit ? 'grid min-w-[360px] grid-cols-[minmax(0,1fr)_110px_80px_90px_36px]' : 'grid min-w-[340px] grid-cols-[minmax(0,1fr)_110px_70px_80px]';
   return (
-    <div className="overflow-hidden rounded border border-line">
+    <div className="overflow-x-auto rounded border border-line">
       <div className={`${cols} border-b border-line bg-panel-2 px-3 py-1.5`}>
         {['name', 'type', 'required', 'default', ...(edit ? [''] : [])].map((h, i) => <div key={i} className="uc">{h}</div>)}
       </div>
@@ -356,7 +356,7 @@ function MaterialCard({ sam, material, edit }: { sam: SubAssemblyMaterial; mater
       {edit ? (
         <RuleEditor rule={sam.rule} paramNames={edit.paramNames} onChange={edit.onChangeRule} sku={material?.sku} />
       ) : (
-        <div className="grid grid-cols-3 gap-2 p-2.5">
+        <div className="grid grid-cols-1 gap-2 p-2.5 sm:grid-cols-3">
           <Knob n="01" label="Applies when">
             {always ? <span className="mono text-[11px] text-ink-3">always</span> : (
               <div className="flex flex-wrap gap-1">
@@ -394,7 +394,7 @@ function RuleEditor({ rule, paramNames, onChange, sku }: { rule: Rule; paramName
     else patch({ qty_kind: 'per_length', qty: rule.qty ?? 1 });
   };
   return (
-    <div className="grid grid-cols-3 gap-2 p-2.5">
+    <div className="grid grid-cols-1 gap-2 p-2.5 sm:grid-cols-3">
       <Knob n="01" label="Applies when">
         <div className="flex flex-col gap-1.5">
           <Field label="variants" hint="names matched at inline-resolution time">

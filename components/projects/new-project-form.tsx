@@ -38,7 +38,7 @@ export function NewProjectForm() {
           <div className="flex flex-col gap-2.5">
             <Field label="visual"><VisualEditor value={visual} name={name || 'project'} onChange={setVisual} /></Field>
             <Field label="name"><TextInput value={name} onChange={setName} placeholder="e.g. Westfield Sky Garden L09" /></Field>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Field label="client"><TextInput value={client} onChange={setClient} /></Field>
               <Field label="location"><TextInput value={location} onChange={setLocation} /></Field>
             </div>

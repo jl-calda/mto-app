@@ -126,7 +126,7 @@ export function AttachmentsEditor({
             <button className="btn sm danger" aria-label="Remove attachment" onClick={() => remove(att.id)}>×</button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Block label="Attached system">
               <Select value={att.attached_system_id} options={systems.map((s) => ({ value: s.id, label: s.name }))} onChange={(v) => update(att.id, { attached_system_id: v })} />
             </Block>
