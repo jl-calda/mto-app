@@ -1,57 +1,21 @@
 'use client';
 
-// AttachmentsEditor — the system-edit interface for declaring attachments
-// (Brief 09 owns this tab of the Brief 04 wizard). It shows every piece of the
-// attachment contract: connection points, model policy, presets (locked/editable),
+// AttachmentsEditor — authoring UI for a system's attachments (rendered on the
+// system detail page). Holds a controlled draft of the attachment list and
+// persists it via saveSystemAttachmentsAction. Every part of the attachment
+// contract is editable: connection points + constraints, model policy, presets,
 // derived bindings, suppressions, and the optional / default-included knobs.
-// The include/optional knobs are live; full authoring mutations + version history
-// land with the wizard (Brief 04) and persistence (Brief 10).
 
 import { useState } from 'react';
-import type {
-  Attachment,
-  ConnectionConstraint,
-  ConnectionPoint,
-  PresetTarget,
-} from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { Field, NumberInput, Select, TextInput, Toggle } from './parts';
+import { saveSystemAttachmentsAction } from '@/app/systems/actions';
+import { blankConnectionPoint, blankConstraint, blankPresetTarget, makeBlankAttachment } from '@/lib/attachment-authoring';
+import type { Attachment, ConnectionConstraint, ConnectionPoint, PresetTarget } from '@/lib/types';
 
-function pointLabel(p: ConnectionPoint): string {
-  switch (p.kind) {
-    case 'head': return 'head';
-    case 'foot': return 'foot';
-    case 'start': return 'start';
-    case 'end': return 'end';
-    case 'segment_end': return `segment[${p.segment_index}] end`;
-    case 'position': return `position ${p.value}`;
-  }
-}
-function constraintLabel(c: ConnectionConstraint): string {
-  switch (c.kind) {
-    case 'height_match': return `height match · ${c.from_field} → ${c.to_field}${c.tolerance ? ` ±${c.tolerance}` : ''}`;
-    case 'alignment': return `alignment · ${c.axis}`;
-    case 'clearance': return `clearance · min ${c.min}`;
-  }
-}
-function presetLabel(t: PresetTarget): string {
-  switch (t.kind) {
-    case 'variant': return 'variant';
-    case 'criterion': return `criterion:${t.name}`;
-    case 'modifier': return `modifier:${t.name}`;
-    case 'property_input': return `${t.property}.${t.input}`;
-    case 'primitive_input_field': return `primitive.${t.field}`;
-  }
-}
-
-function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
-  return (
-    <button onClick={onClick} className="flex items-center gap-1.5">
-      <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}>
-        <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
-      </span>
-      <span className="text-[11px] text-ink-2">{label}</span>
-    </button>
-  );
-}
+const POINT_KINDS: ConnectionPoint['kind'][] = ['head', 'foot', 'start', 'end', 'segment_end', 'position'];
+const CONSTRAINT_KINDS: ConnectionConstraint['kind'][] = ['height_match', 'alignment', 'clearance'];
+const PRESET_KINDS: PresetTarget['kind'][] = ['variant', 'criterion', 'modifier', 'property_input', 'primitive_input_field'];
 
 function Block({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -62,116 +26,194 @@ function Block({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function ConnectionPointEditor({ point, onChange }: { point: ConnectionPoint; onChange: (p: ConnectionPoint) => void }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Select value={point.kind} options={POINT_KINDS} onChange={(k) => onChange(blankConnectionPoint(k))} />
+      {point.kind === 'segment_end' && <NumberInput value={point.segment_index} onChange={(v) => onChange({ kind: 'segment_end', segment_index: v })} />}
+      {point.kind === 'position' && <NumberInput value={point.value} onChange={(v) => onChange({ kind: 'position', value: v })} />}
+    </div>
+  );
+}
+
+function ConstraintEditor({ c, onChange }: { c: ConnectionConstraint; onChange: (c: ConnectionConstraint) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select value={c.kind} options={CONSTRAINT_KINDS} onChange={(k) => onChange(blankConstraint(k))} />
+      {c.kind === 'height_match' && (
+        <>
+          <input className="input mono" style={{ width: 120 }} value={c.from_field} onChange={(e) => onChange({ ...c, from_field: e.target.value })} />
+          <span className="text-ink-4">→</span>
+          <input className="input mono" style={{ width: 120 }} value={c.to_field} onChange={(e) => onChange({ ...c, to_field: e.target.value })} />
+        </>
+      )}
+      {c.kind === 'alignment' && <Select value={c.axis} options={['x', 'y', 'z'] as const} onChange={(axis) => onChange({ kind: 'alignment', axis })} />}
+      {c.kind === 'clearance' && <NumberInput value={c.min} onChange={(v) => onChange({ kind: 'clearance', min: v })} />}
+    </div>
+  );
+}
+
+function PresetTargetEditor({ target, onChange }: { target: PresetTarget; onChange: (t: PresetTarget) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select value={target.kind} options={PRESET_KINDS} onChange={(k) => onChange(blankPresetTarget(k))} />
+      {(target.kind === 'criterion' || target.kind === 'modifier') && (
+        <input className="input mono" style={{ width: 110 }} value={target.name} onChange={(e) => onChange({ ...target, name: e.target.value })} />
+      )}
+      {target.kind === 'property_input' && (
+        <>
+          <input className="input mono" style={{ width: 90 }} value={target.property} onChange={(e) => onChange({ ...target, property: e.target.value })} />
+          <span className="text-ink-4">.</span>
+          <input className="input mono" style={{ width: 90 }} value={target.input} onChange={(e) => onChange({ ...target, input: e.target.value })} />
+        </>
+      )}
+      {target.kind === 'primitive_input_field' && (
+        <input className="input mono" style={{ width: 90 }} value={target.field} onChange={(e) => onChange({ ...target, field: e.target.value })} />
+      )}
+    </div>
+  );
+}
+
 export function AttachmentsEditor({
+  systemId,
   attachments,
-  attachedNames,
+  systems,
 }: {
+  systemId: string;
   attachments: Attachment[];
-  attachedNames: Record<string, string>;
+  systems: { id: string; name: string }[];
 }) {
-  const [knobs, setKnobs] = useState<Record<string, { optional: boolean; default_included: boolean }>>(() => {
-    const o: Record<string, { optional: boolean; default_included: boolean }> = {};
-    for (const a of attachments) o[a.id] = { optional: a.optional, default_included: a.default_included };
-    return o;
-  });
+  const router = useRouter();
+  const [drafts, setDrafts] = useState<Attachment[]>(attachments);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [error, setError] = useState<string>();
+
+  const update = (id: string, patch: Partial<Attachment>) => setDrafts((ds) => ds.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  const remove = (id: string) => setDrafts((ds) => ds.filter((a) => a.id !== id));
+  const add = () => setDrafts((ds) => [...ds, makeBlankAttachment(`att-${crypto.randomUUID().slice(0, 8)}`, systems[0]?.id ?? '')]);
+
+  async function save() {
+    setStatus('saving'); setError(undefined);
+    const res = await saveSystemAttachmentsAction(systemId, drafts);
+    if (res.ok) { setStatus('saved'); router.refresh(); }
+    else { setStatus('error'); setError(res.error); }
+  }
 
   return (
     <section className="overflow-hidden rounded-md border border-line bg-panel">
       <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
         <div className="flex items-center gap-2">
           <h3 className="m-0 text-[13px] font-semibold">Attachments</h3>
-          <span className="mono text-[10px] text-ink-3">{attachments.length}</span>
+          <span className="mono text-[10px] text-ink-3">{drafts.length}</span>
         </div>
-        <button className="btn sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }} title="Attachment authoring lands in the full system wizard">+ Add attachment</button>
+        <div className="flex items-center gap-2">
+          {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
+          {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
+          <button className="btn sm" onClick={add} disabled={systems.length === 0}>+ Add attachment</button>
+          <button className="btn primary sm" onClick={save} disabled={status === 'saving'}>{status === 'saving' ? 'Saving…' : 'Save attachments'}</button>
+        </div>
       </header>
 
-      <div className="flex items-center gap-2 border-b border-line px-3.5 py-2" style={{ background: 'var(--selected)' }}>
-        <span className="mono text-[11px] text-accent">draft</span>
-        <span className="text-[11px] text-ink-2">Include / optional knobs are live; full authoring &amp; persistence land with the wizard (Brief 04) and version history (Brief 10).</span>
-      </div>
-
-      {attachments.map((att) => {
-        const k = knobs[att.id];
-        const policy = att.model_binding;
-        return (
-          <div key={att.id} className="border-b border-line p-3.5 last:border-b-0">
-            {/* header */}
-            <div className="mb-3 flex items-center gap-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="text-[14px] font-semibold">{att.role_label}</div>
-                <div className="mono text-[10px] text-ink-3">→ {attachedNames[att.attached_system_id] ?? att.attached_system_id}</div>
-              </div>
-              <Toggle on={k.optional} onClick={() => setKnobs((s) => ({ ...s, [att.id]: { ...s[att.id], optional: !s[att.id].optional } }))} label="optional" />
-              <Toggle on={k.default_included} onClick={() => setKnobs((s) => ({ ...s, [att.id]: { ...s[att.id], default_included: !s[att.id].default_included } }))} label="default-included" />
+      {drafts.map((att) => (
+        <div key={att.id} className="border-b border-line p-3.5 last:border-b-0">
+          <div className="mb-3 flex items-center gap-2.5">
+            <div className="min-w-0 flex-1">
+              <input className="input text w-full max-w-[320px] text-[14px] font-semibold" style={{ height: 'auto', padding: '2px 8px' }}
+                value={att.role_label} onChange={(e) => update(att.id, { role_label: e.target.value })} placeholder="Role label" />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Block label="Connection">
-                <div className="flex flex-col gap-1 rounded border border-line p-2.5">
-                  <div className="mono text-[12px]">{pointLabel(att.connection.from_point)} <span className="text-ink-4">→</span> {pointLabel(att.connection.to_point)}</div>
-                  {att.connection.constraints.map((c, i) => (
-                    <div key={i} className="mono text-[10px] text-ink-3">{constraintLabel(c)}</div>
-                  ))}
-                  {att.connection.constraints.length === 0 && <div className="mono text-[10px] text-ink-4">no constraints</div>}
-                </div>
-              </Block>
-
-              <Block label="Model policy">
-                <div className="rounded border border-line p-2.5">
-                  {policy.kind === 'pinned' ? (
-                    <div className="text-[12px]">Pinned · <span className="mono text-[11px]">{policy.model_id}</span></div>
-                  ) : (
-                    <div className="text-[12px]">Choose at take-off{policy.default_model_id ? <> · default <span className="mono text-[11px]">{policy.default_model_id}</span></> : null}</div>
-                  )}
-                </div>
-              </Block>
-
-              <Block label={`Presets · ${att.presets.length}`}>
-                <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
-                  {att.presets.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className={`tag ${p.locked ? '' : ''}`} style={{ color: p.locked ? 'var(--annotation)' : 'var(--ink-2)' }}>{p.locked ? '🔒 locked' : 'editable'}</span>
-                      <span className="mono text-[11px]">{presetLabel(p.target)} = {String(p.value)}</span>
-                    </div>
-                  ))}
-                  {att.presets.length === 0 && <div className="mono text-[10px] text-ink-4">none</div>}
-                </div>
-              </Block>
-
-              <Block label={`Derived bindings · ${att.derived_bindings.length}`}>
-                <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
-                  {att.derived_bindings.map((d, i) => (
-                    <div key={i} className="mono text-[11px]">{presetLabel(d.target)} <span className="text-ink-4">←</span> {constraintLabel(d.source)}</div>
-                  ))}
-                  {att.derived_bindings.length === 0 && <div className="mono text-[10px] text-ink-4">none</div>}
-                </div>
-              </Block>
-
-              <Block label={`Suppressions · ${att.suppressions.length}`}>
-                <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
-                  {att.suppressions.map((sup, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="tag" style={{ color: sup.member === 'this' ? 'var(--prim-height)' : 'var(--accent)' }}>{sup.member}</span>
-                      <span className="mono text-[11px]">{sup.property_name}</span>
-                      <span className="tag">{sup.region ?? 'at_connection'}</span>
-                    </div>
-                  ))}
-                  {att.suppressions.length === 0 && <div className="mono text-[10px] text-ink-4">none</div>}
-                </div>
-              </Block>
-
-              <Block label="Connection materials">
-                <div className="rounded border border-line p-2.5 text-[11px] text-ink-2">
-                  Declared as model-level rules (gate, transition brackets) per model — see the model editor. They join the host&apos;s shared cut pool.
-                </div>
-              </Block>
-            </div>
+            <Toggle on={att.optional} onChange={(v) => update(att.id, { optional: v })} label="optional" />
+            <Toggle on={att.default_included} onChange={(v) => update(att.id, { default_included: v })} label="default-included" />
+            <button className="btn sm danger" aria-label="Remove attachment" onClick={() => remove(att.id)}>×</button>
           </div>
-        );
-      })}
 
-      {attachments.length === 0 && (
-        <div className="px-3.5 py-6 text-center text-[12px] text-ink-3">No attachments declared.</div>
+          <div className="grid grid-cols-2 gap-3">
+            <Block label="Attached system">
+              <Select value={att.attached_system_id} options={systems.map((s) => ({ value: s.id, label: s.name }))} onChange={(v) => update(att.id, { attached_system_id: v })} />
+            </Block>
+
+            <Block label="Model policy">
+              <div className="flex items-center gap-1.5">
+                <Select value={att.model_binding.kind} options={[{ value: 'pinned', label: 'pinned' }, { value: 'choose_at_takeoff', label: 'choose at take-off' }] as const}
+                  onChange={(kind) => update(att.id, { model_binding: kind === 'pinned' ? { kind: 'pinned', model_id: att.model_binding.kind === 'pinned' ? att.model_binding.model_id : '' } : { kind: 'choose_at_takeoff', default_model_id: att.model_binding.kind === 'choose_at_takeoff' ? att.model_binding.default_model_id : undefined } })} />
+                {att.model_binding.kind === 'pinned' ? (
+                  <input className="input mono w-full" placeholder="model id" value={att.model_binding.model_id} onChange={(e) => update(att.id, { model_binding: { kind: 'pinned', model_id: e.target.value } })} />
+                ) : (
+                  <input className="input mono w-full" placeholder="default model id (optional)" value={att.model_binding.default_model_id ?? ''} onChange={(e) => update(att.id, { model_binding: { kind: 'choose_at_takeoff', default_model_id: e.target.value || undefined } })} />
+                )}
+              </div>
+            </Block>
+
+            <Block label="Connection">
+              <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
+                <div className="flex items-center gap-2">
+                  <ConnectionPointEditor point={att.connection.from_point} onChange={(from_point) => update(att.id, { connection: { ...att.connection, from_point } })} />
+                  <span className="text-ink-4">→</span>
+                  <ConnectionPointEditor point={att.connection.to_point} onChange={(to_point) => update(att.id, { connection: { ...att.connection, to_point } })} />
+                </div>
+                {att.connection.constraints.map((c, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <ConstraintEditor c={c} onChange={(nc) => update(att.id, { connection: { ...att.connection, constraints: att.connection.constraints.map((x, j) => (j === i ? nc : x)) } })} />
+                    <button className="btn sm danger" aria-label="Remove constraint" onClick={() => update(att.id, { connection: { ...att.connection, constraints: att.connection.constraints.filter((_, j) => j !== i) } })}>×</button>
+                  </div>
+                ))}
+                <button className="btn sm self-start" onClick={() => update(att.id, { connection: { ...att.connection, constraints: [...att.connection.constraints, blankConstraint('height_match')] } })}>+ constraint</button>
+              </div>
+            </Block>
+
+            <Block label="Presets">
+              <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
+                {att.presets.map((p, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-1.5">
+                    <PresetTargetEditor target={p.target} onChange={(target) => update(att.id, { presets: att.presets.map((x, j) => (j === i ? { ...x, target } : x)) })} />
+                    <span className="text-ink-4">=</span>
+                    <input className="input mono" style={{ width: 90 }} value={String(p.value ?? '')} onChange={(e) => update(att.id, { presets: att.presets.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} />
+                    <Toggle on={p.locked} onChange={(v) => update(att.id, { presets: att.presets.map((x, j) => (j === i ? { ...x, locked: v } : x)) })} label="locked" />
+                    <button className="btn sm danger" aria-label="Remove preset" onClick={() => update(att.id, { presets: att.presets.filter((_, j) => j !== i) })}>×</button>
+                  </div>
+                ))}
+                <button className="btn sm self-start" onClick={() => update(att.id, { presets: [...att.presets, { target: blankPresetTarget('modifier'), value: '', locked: false }] })}>+ preset</button>
+              </div>
+            </Block>
+
+            <Block label="Derived bindings">
+              <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
+                {att.derived_bindings.map((d, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-1.5">
+                    <PresetTargetEditor target={d.target} onChange={(target) => update(att.id, { derived_bindings: att.derived_bindings.map((x, j) => (j === i ? { ...x, target } : x)) })} />
+                    <span className="text-ink-4">←</span>
+                    <ConstraintEditor c={d.source} onChange={(source) => update(att.id, { derived_bindings: att.derived_bindings.map((x, j) => (j === i ? { ...x, source } : x)) })} />
+                    <button className="btn sm danger" aria-label="Remove derived binding" onClick={() => update(att.id, { derived_bindings: att.derived_bindings.filter((_, j) => j !== i) })}>×</button>
+                  </div>
+                ))}
+                <button className="btn sm self-start" onClick={() => update(att.id, { derived_bindings: [...att.derived_bindings, { target: blankPresetTarget('modifier'), source: blankConstraint('height_match') }] })}>+ binding</button>
+              </div>
+            </Block>
+
+            <Block label="Suppressions">
+              <div className="flex flex-col gap-1.5 rounded border border-line p-2.5">
+                {att.suppressions.map((s, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-1.5">
+                    <Select value={s.member} options={['this', 'attached'] as const} onChange={(member) => update(att.id, { suppressions: att.suppressions.map((x, j) => (j === i ? { ...x, member } : x)) })} />
+                    <input className="input mono" style={{ width: 110 }} placeholder="property" value={s.property_name} onChange={(e) => update(att.id, { suppressions: att.suppressions.map((x, j) => (j === i ? { ...x, property_name: e.target.value } : x)) })} />
+                    <Select value={s.region ?? 'at_connection'} options={['at_connection', 'whole'] as const} onChange={(region) => update(att.id, { suppressions: att.suppressions.map((x, j) => (j === i ? { ...x, region } : x)) })} />
+                    <button className="btn sm danger" aria-label="Remove suppression" onClick={() => update(att.id, { suppressions: att.suppressions.filter((_, j) => j !== i) })}>×</button>
+                  </div>
+                ))}
+                <button className="btn sm self-start" onClick={() => update(att.id, { suppressions: [...att.suppressions, { member: 'attached', property_name: '', region: 'at_connection' }] })}>+ suppression</button>
+              </div>
+            </Block>
+
+            <Block label="Connection materials">
+              <div className="rounded border border-line p-2.5 text-[11px] text-ink-2">
+                Declared as model-level rules (gate, transition brackets) per model — see the model editor. They join the host&apos;s shared cut pool.
+              </div>
+            </Block>
+          </div>
+        </div>
+      ))}
+
+      {drafts.length === 0 && (
+        <div className="px-3.5 py-6 text-center text-[12px] text-ink-3">No attachments declared. {systems.length === 0 ? 'Create another system to attach.' : 'Use “+ Add attachment”.'}</div>
       )}
     </section>
   );
