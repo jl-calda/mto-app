@@ -42,13 +42,13 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       {/* header */}
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="m-0 text-[22px] font-semibold">Materials</h1>
           <div className="mt-1 text-[12px] text-ink-3">Global SKU catalogue — referenced by model rules and SKU lookups.</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="SKUs" v={materials.length} />
             <Stat k="vendors" v={vendors.size} />
             <Stat k="groups" v={groups.size} />

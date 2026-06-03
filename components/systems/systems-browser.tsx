@@ -35,7 +35,7 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold">Systems</h1>
@@ -44,7 +44,7 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
           <div className="mt-1 text-[12px] text-ink-3">Reusable definitions of what to measure and which design choices to offer.</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="systems" v={systems.length} />
             <Stat k="models" v={models} />
           </div>

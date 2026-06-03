@@ -25,7 +25,7 @@ export function ProjectsBrowser({ projects }: { projects: Project[] }) {
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold">Projects</h1>
@@ -33,7 +33,7 @@ export function ProjectsBrowser({ projects }: { projects: Project[] }) {
           </div>
           <div className="mt-1 text-[12px] text-ink-3">Workspaces where take-offs happen and MTOs are produced.</div>
         </div>
-        <div className="flex border-l border-line">
+        <div className="flex flex-wrap border-line lg:border-l">
           <Stat k="projects" v={projects.length} />
           <Stat k="take-offs" v={takeoffs} />
           <Stat k="systems used" v={systems} />

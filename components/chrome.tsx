@@ -306,7 +306,7 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <div style={phStyles.bar}>
+    <div className="flex flex-col gap-3 border-b border-line px-5 py-4 lg:flex-row lg:items-end lg:justify-between lg:px-6">
       <div style={phStyles.left}>
         <h1 style={phStyles.title}>{title}</h1>
         {subtitle && <div style={phStyles.subtitle}>{subtitle}</div>}

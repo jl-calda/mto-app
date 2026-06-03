@@ -47,7 +47,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   return (
     <Shell navActive="projects" crumbs={[{ label: 'Projects', href: '/' }, { label: project.name }]}>
       <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-        <div className="flex items-end justify-between border-b border-line pb-3.5">
+        <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-3">
             <Visual visual={project.visual} name={project.name} size={40} rounded={6} />
             <div>
@@ -58,14 +58,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
           </div>
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="take-offs" v={project.takeoffs.length} />
             <Stat k="systems used" v={usedSystemIds.length} />
             {reviewCount > 0 && <Stat k="review" v={reviewCount} highlight="warn" />}
           </div>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-4 py-4">
+        <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section className="overflow-hidden rounded-md border border-line bg-panel">
             <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
               <h3 className="m-0 text-[13px] font-semibold">Take-offs</h3>

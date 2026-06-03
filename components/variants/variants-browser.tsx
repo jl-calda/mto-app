@@ -39,13 +39,13 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="m-0 text-[22px] font-semibold">Variants</h1>
           <div className="mt-1 text-[12px] text-ink-3">Global design-family alternatives, snapshotted into take-offs at use.</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="active" v={active} />
             <Stat k="total" v={variants.length} />
           </div>
@@ -53,7 +53,7 @@ export function VariantsBrowser({ variants }: { variants: Variant[] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,380px)_minmax(0,1fr)] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         {/* list */}
         <section className="overflow-hidden rounded-md border border-line bg-panel">
           <div className="flex flex-col gap-2 border-b border-line bg-panel-2 p-2.5">
