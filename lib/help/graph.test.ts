@@ -12,17 +12,20 @@ describe('buildSystemGraph', () => {
   const ladder = seed.systems.find((s) => s.id === 'sys-vectaladder') as System;
   const evo = seed.systems.find((s) => s.id === 'sys-evo-guardrail') as System;
 
-  it('emits a node per declared input + each material + each model + meas/mto', () => {
-    const g = buildSystemGraph(ladder, seed.materials);
+  it('emits a node per declared input + each material, with meas and no MTO node', () => {
+    const g = buildSystemGraph(ladder, seed.materials); // single-model system
     const count = (k: string) => g.nodes.filter((n) => n.kind === k).length;
     expect(count('variant')).toBe(ladder.variants.rows.length);
     expect(count('modifier')).toBe(ladder.modifiers.length);
     expect(count('criterion')).toBe(ladder.criteria.length);
     expect(count('property')).toBe(ladder.properties.length);
-    expect(count('model')).toBe(ladder.models.length);
     expect(count('material')).toBe(ladder.models.reduce((n, m) => n + m.materials.length, 0));
     expect(hasNode(g, 'meas')).toBe(true);
-    expect(hasNode(g, 'mto')).toBe(true);
+    expect(hasNode(g, 'mto')).toBe(false); // MTO node removed
+    // single model → surfaced as the header, not a node, and materials are terminal
+    expect(count('model')).toBe(0);
+    expect(g.modelName).toBe(ladder.models[0].name);
+    expect(g.edges.some((e) => e.role === 'feeds')).toBe(false);
     expect(g.title).toBe(ladder.name);
   });
 
@@ -57,15 +60,19 @@ describe('buildSystemGraph', () => {
     expect(g.edges.some((e) => e.role === 'qty' && e.source === 'prop:rungs' && e.target === 'mat:vm-rung')).toBe(true);
   });
 
-  it('wires the structural backbone: every material → its model → MTO', () => {
-    const g = buildSystemGraph(evo, seed.materials);
+  it('groups a multi-model system under terminal model nodes, with no MTO', () => {
+    const g = buildSystemGraph(evo, seed.materials); // EVO has 2 models
+    expect(g.modelName).toBeUndefined();
+    expect(hasNode(g, 'mto')).toBe(false);
+    expect(g.nodes.filter((n) => n.kind === 'model').length).toBe(evo.models.length);
     for (const m of g.nodes.filter((n) => n.kind === 'material')) {
       const feeds = out(g, m.id).filter((e) => e.role === 'feeds');
       expect(feeds.length).toBe(1);
       expect(feeds[0].target).toBe(`model:${m.model}`);
     }
+    // model nodes are now terminal (no model → MTO)
     for (const model of g.nodes.filter((n) => n.kind === 'model')) {
-      expect(out(g, model.id).filter((e) => e.role === 'feeds' && e.target === 'mto').length).toBe(1);
+      expect(out(g, model.id).length).toBe(0);
     }
   });
 
