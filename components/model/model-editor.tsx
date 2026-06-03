@@ -7,6 +7,7 @@ import { saveModelAction, deleteModelAction } from '@/app/models/actions';
 import { Visual } from '@/components/visual';
 import { VisualEditor } from '@/components/visual-editor';
 import { DeleteButton } from '@/components/delete-button';
+import { HelpButton } from '@/components/help/help-button';
 import { Field, NumberInput, Select, TextInput } from '@/components/system-wizard/parts';
 import type { AlgorithmName, Material, Model, ModelMaterial, PerTarget, Rule, System, SystemVariantRef } from '@/lib/types';
 
@@ -152,7 +153,10 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
         <div className="flex items-start gap-3">
           <div className="w-[300px]"><VisualEditor value={model.visual} name={model.name} onChange={(v) => setModel((m) => ({ ...m, visual: v }))} /></div>
           <div>
-            <input className="input text text-[18px] font-semibold" style={{ height: 'auto', padding: '2px 8px' }} value={model.name} onChange={(e) => setModel((m) => ({ ...m, name: e.target.value }))} />
+            <div className="flex items-center gap-1.5">
+              <input className="input text text-[18px] font-semibold" style={{ height: 'auto', padding: '2px 8px' }} value={model.name} onChange={(e) => setModel((m) => ({ ...m, name: e.target.value }))} />
+              <HelpButton topic="model" />
+            </div>
             <div className="mono mt-1 text-[11px] text-ink-3">{system.name} · {model.status} · {model.materials.length} materials</div>
           </div>
         </div>

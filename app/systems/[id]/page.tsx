@@ -5,7 +5,9 @@ import { Shell } from '@/components/shell';
 import { PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
 import { AttachmentsEditor } from '@/components/system-wizard/AttachmentsEditor';
+import { HelpButton } from '@/components/help/help-button';
 import { getRepo } from '@/lib/repo';
+import type { ConceptId } from '@/lib/help/content';
 import type { PrimitiveKind } from '@/lib/types';
 
 const BADGEABLE: PrimitiveKind[] = ['length', 'height', 'count'];
@@ -27,7 +29,10 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
           <div className="flex items-center gap-3">
             <Visual visual={system.visual} name={system.name} size={40} rounded={6} />
             <div>
-              <h1 className="m-0 text-[22px] font-semibold">{system.name}</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="m-0 text-[22px] font-semibold">{system.name}</h1>
+                <HelpButton topic="system" />
+              </div>
               <div className="mt-1.5 flex items-center gap-1.5">
                 {BADGEABLE.includes(k) ? (
                   <PrimitiveBadge kind={k as 'length' | 'height' | 'count'} />
@@ -53,24 +58,24 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="grid grid-cols-2 gap-4 py-4">
-          <Preview title="Variants">
+          <Preview title="Variants" topic="variant">
             {system.variants.rows.map((r, i) => (
               <span key={i} className="tag">{r.kind === 'local' ? r.name : r.variant_id}</span>
             ))}
           </Preview>
-          <Preview title="Modifiers">
+          <Preview title="Modifiers" topic="modifier">
             {system.modifiers.map((m) => (
               <span key={m.name} className="tag">
                 {m.name} <span className="text-ink-4">· {m.group}</span>
               </span>
             ))}
           </Preview>
-          <Preview title="Criteria">
+          <Preview title="Criteria" topic="criterion">
             {system.criteria.map((c) => (
               <span key={c.library_id} className="tag">{c.library_id}</span>
             ))}
           </Preview>
-          <Preview title="Properties">
+          <Preview title="Properties" topic="property">
             {system.properties.map((p) => (
               <span key={p.name} className="tag">
                 {p.name} <span className="text-ink-4">· {p.archetype}</span>
@@ -112,11 +117,12 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
   );
 }
 
-function Preview({ title, children }: { title: string; children: ReactNode }) {
+function Preview({ title, children, topic }: { title: string; children: ReactNode; topic?: ConceptId }) {
   return (
     <section className="overflow-hidden rounded-md border border-line bg-panel">
-      <header className="border-b border-line bg-panel-2 px-3.5 py-2.5">
+      <header className="flex items-center gap-1.5 border-b border-line bg-panel-2 px-3.5 py-2.5">
         <h3 className="m-0 text-[13px] font-semibold">{title}</h3>
+        {topic && <HelpButton topic={topic} />}
       </header>
       <div className="flex flex-wrap gap-1.5 p-3.5">{children}</div>
     </section>

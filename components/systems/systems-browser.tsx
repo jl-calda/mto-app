@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { DeleteButton } from '@/components/delete-button';
+import { HelpButton } from '@/components/help/help-button';
 import { deleteSystemAction } from '@/app/systems/actions';
 import type { PrimitiveKind, System } from '@/lib/types';
 
@@ -34,7 +35,10 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       <div className="flex items-end justify-between border-b border-line pb-3.5">
         <div>
-          <h1 className="m-0 text-[22px] font-semibold">Systems</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="m-0 text-[22px] font-semibold">Systems</h1>
+            <HelpButton topic="system" />
+          </div>
           <div className="mt-1 text-[12px] text-ink-3">Reusable definitions of what to measure and which design choices to offer.</div>
         </div>
         <div className="flex items-center gap-3">

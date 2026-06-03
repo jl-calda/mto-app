@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
 import { DeleteButton } from '@/components/delete-button';
+import { HelpButton } from '@/components/help/help-button';
 import { deleteProjectAction } from '@/app/projects/actions';
 import type { Project } from '@/lib/types';
 
@@ -24,7 +25,10 @@ export function ProjectsBrowser({ projects }: { projects: Project[] }) {
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       <div className="flex items-end justify-between border-b border-line pb-3.5">
         <div>
-          <h1 className="m-0 text-[22px] font-semibold">Projects</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="m-0 text-[22px] font-semibold">Projects</h1>
+            <HelpButton topic="takeoff" />
+          </div>
           <div className="mt-1 text-[12px] text-ink-3">Workspaces where take-offs happen and MTOs are produced.</div>
         </div>
         <div className="flex border-l border-line">

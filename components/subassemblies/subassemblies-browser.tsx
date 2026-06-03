@@ -6,6 +6,7 @@ import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
 import { VersionTimeline } from '@/components/version-history/VersionTimeline';
 import { Field, NumberInput, Select, TextInput, Toggle } from '@/components/system-wizard/parts';
+import { HelpButton } from '@/components/help/help-button';
 import { publishSubAssemblyAction, saveSubAssemblyAction } from '@/app/sub-assemblies/actions';
 import { blankParam, blankSam, coerceParamDefault } from '@/lib/subassembly-authoring';
 import type { AttrValue, InputType, Material, ParameterDef, PerTarget, Rule, SubAssembly, SubAssemblyMaterial } from '@/lib/types';
@@ -91,7 +92,10 @@ export function SubAssembliesBrowser({
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       <div className="flex items-end justify-between border-b border-line pb-3.5">
         <div>
-          <h1 className="m-0 text-[22px] font-semibold">Sub-assemblies</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="m-0 text-[22px] font-semibold">Sub-assemblies</h1>
+            <HelpButton topic="subassembly" />
+          </div>
           <div className="mt-1 text-[12px] text-ink-3">Parametric, reusable material bundles — inlined into models through the shared evaluator.</div>
         </div>
         <div className="flex border-l border-line">
