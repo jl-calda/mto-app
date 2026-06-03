@@ -47,6 +47,7 @@ export default async function TakeoffByIdPage({ params }: { params: Promise<{ id
           primitive={kind} initial={derivePrimitiveTotal(takeoff) ?? (kind === 'height' ? 9450 : 24000)}
           initialVariant={deriveVariantIndex(system, takeoff)} iconName={kind === 'height' ? 'ladder' : 'post'}
           subAssemblies={subAssemblies} attachableSystems={attachableSystems} inventory={inventory} persist={persist}
+          initialProps={takeoff.property_values}
         />
       </Shell>
     );
