@@ -54,13 +54,22 @@ describe('worked example 2 — Vectaladder cage ladder, 14 m (height, auto-fligh
     input: { criteria_values: { compliance_code: 'NF_E85-016', material_grade: 'aluminium' }, modifier_values: { wall_offset: 210, substrate: 'concrete' }, primitive_input: 14000, property_values: { landing_width: { width: 800 } } },
   });
   const q = bySku(r);
-  it('auto-splits into 2 flights + 1 rest platform', () => { expect(r.counters.flights).toBe(2); expect(q['REST-PLATFORM']).toBe(1); });
+  it('auto-splits into 2 flights + 1 rest platform (handed SKU, default left)', () => { expect(r.counters.flights).toBe(2); expect(q['REST-PLATFORM-L']).toBe(1); });
   it('rungs run continuously over the climb', () => expect(q['RUNG-30x30-AL']).toBe(51));
   it('splice kits = pack joints × 2 stiles', () => expect(q['SPLICE-AL']).toBe(4));
   it('bracket SKU resolves by wall_offset band + substrate (BRK-205-CON)', () => expect(q['BRK-205-CON']).toBe(8));
   it('exit-landing SKU resolves by width (800 → 02662)', () => expect(q['02662']).toBe(1));
   it('cage fires (threshold over the cage_zone span)', () => expect(q['CAGE-HOOP-AL']).toBeGreaterThan(0));
   it('no metal-deck fixing on a concrete substrate', () => expect(q['03177']).toBeUndefined());
+  it('rest-platform SKU is handed by landing_side (right → REST-PLATFORM-R)', () => {
+    const rr = resolveTakeoff({
+      system: s, model: model(s), variant: v, materials: seed.materials, resolveSubAssembly, resolveAttachedSystem,
+      input: { criteria_values: { compliance_code: 'NF_E85-016', material_grade: 'aluminium' }, modifier_values: { wall_offset: 210, substrate: 'concrete', landing_side: 'right' }, primitive_input: 14000, property_values: { landing_width: { width: 800 } } },
+    });
+    const qr = bySku(rr);
+    expect(qr['REST-PLATFORM-R']).toBe(1);
+    expect(qr['REST-PLATFORM-L']).toBeUndefined();
+  });
 });
 
 describe('worked example 3 — EVO freestanding guardrail, L-shaped 16 m (length, segmented)', () => {
@@ -76,6 +85,20 @@ describe('worked example 3 — EVO freestanding guardrail, L-shaped 16 m (length
   it('handrail + knee rail pack into 3 m lengths', () => { expect(q['RAIL-45-AL']).toBe(6); expect(q['RAIL-35-AL']).toBe(6); });
   it('end caps per free end (×2 rails); corner kit per corner', () => { expect(q['CAP-AL']).toBe(4); expect(q['EVO-CORNER']).toBe(1); });
   it('optional toeboard + gate fire when set', () => { expect(q['TOE-150-AL']).toBe(6); expect(q['0733603']).toBe(1); });
+  it('per-segment placement forces a shared upright at every corner (3×2 m L → 7, not the 5 a spanned run would give)', () => {
+    const r3 = resolveTakeoff({
+      system: s, model: model(s, 'mdl-evo-fs'), variant: v, materials: seed.materials, resolveSubAssembly, resolveAttachedSystem,
+      input: { criteria_values: { compliance_code: 'NF_E85-015', wind_zone: '1' }, modifier_values: { upright_angle: 'straight', base_type: 'freestanding' }, primitive_input: { mode: 'segmented', segments: [{ length: 2000, junction_after: { type: 'corner' } }, { length: 2000, junction_after: { type: 'corner' } }, { length: 2000 }] }, property_values: {} },
+    });
+    expect(bySku(r3)['UPR-STR-AL']).toBe(7);
+  });
+  it('counterweights scale with wind zone (zone 2 → 3/upright = 38, vs 26 at zone 1)', () => {
+    const r2 = resolveTakeoff({
+      system: s, model: model(s, 'mdl-evo-fs'), variant: v, materials: seed.materials, resolveSubAssembly, resolveAttachedSystem,
+      input: { criteria_values: { compliance_code: 'NF_E85-015', wind_zone: '2' }, modifier_values: { upright_angle: 'straight', base_type: 'freestanding' }, primitive_input: { mode: 'segmented', segments: [{ length: 10000, junction_after: { type: 'corner' } }, { length: 6000 }] }, property_values: {} },
+    });
+    expect(bySku(r2)['03468']).toBe(3 * 12 + 2);
+  });
 });
 
 describe('worked example — Vectaladder → EVO walkway attachment (joint kit 03008, one cut pool)', () => {

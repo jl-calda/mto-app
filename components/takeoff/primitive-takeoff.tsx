@@ -8,7 +8,7 @@ import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
 import { CuttingDiagram } from '@/components/takeoff/CuttingDiagram';
-import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, PresetTarget, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
+import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, PresetTarget, PropertyInput, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -49,6 +49,7 @@ export function PrimitiveTakeoff({
   attachableSystems = [],
   inventory = [],
   persist,
+  initialProps,
 }: {
   system: System;
   model: Model;
@@ -63,10 +64,35 @@ export function PrimitiveTakeoff({
   attachableSystems?: System[];
   inventory?: InventoryItem[];
   persist?: PersistTarget;
+  initialProps?: Record<string, unknown>;
 }) {
   const rows = system.variants.rows;
   const [variantIdx, setVariantIdx] = useState(initialVariant);
   const [value, setValue] = useState(initial);
+
+  // editable property inputs (rung spacing, cage threshold, gates, toeboard, landing width, …),
+  // seeded from each input's default (overridden by any saved values), fed into property_values.
+  const [propValues, setPropValues] = useState<Record<string, Record<string, number | boolean | string>>>(() => {
+    const o: Record<string, Record<string, number | boolean | string>> = {};
+    for (const p of system.properties) {
+      for (const inp of p.inputs) {
+        let v: number | boolean | string | undefined;
+        switch (inp.type.kind) {
+          case 'distance': case 'number': case 'integer': v = typeof inp.default === 'number' ? inp.default : 0; break;
+          case 'bool': v = typeof inp.default === 'boolean' ? inp.default : false; break;
+          case 'enum': v = typeof inp.default === 'string' ? inp.default : (inp.type.values[0] ?? ''); break;
+          default: v = undefined; // 'variant' inputs are authored elsewhere
+        }
+        if (v === undefined) continue;
+        const saved = (initialProps?.[p.name] as Record<string, unknown> | undefined)?.[inp.name];
+        if (typeof saved === typeof v) v = saved as typeof v;
+        (o[p.name] ??= {})[inp.name] = v;
+      }
+    }
+    return o;
+  });
+  const setPropInput = (prop: string, input: string, v: number | boolean | string) =>
+    setPropValues((o) => ({ ...o, [prop]: { ...(o[prop] ?? {}), [input]: v } }));
 
   // segmented-length support (only for segmentable length systems)
   const canSegment = primitive === 'length' && system.primitive.kind === 'length' && system.primitive.segmentable === true;
@@ -119,7 +145,7 @@ export function PrimitiveTakeoff({
           criteria_values: criteria,
           modifier_values: {},
           primitive_input: primitiveInput,
-          property_values: {},
+          property_values: propValues,
           attachments: attachmentInstances,
           chain_overrides: Object.keys(chainOverrides).length ? chainOverrides : undefined,
         },
@@ -148,13 +174,13 @@ export function PrimitiveTakeoff({
     criteria_values: criteria,
     modifier_values: {},
     primitive_input: primitiveInput,
-    property_values: {},
+    property_values: propValues,
     attachments: attachmentInstances,
     computed_geometry: result.geometry,
     mto: result.mto,
     warnings: result.warnings,
   });
-  const sig = JSON.stringify({ variantIdx, primitiveInput, attState, mto: result.mto.length, items });
+  const sig = JSON.stringify({ variantIdx, primitiveInput, propValues, attState, mto: result.mto.length, items });
   const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
   function download(blob: Blob, ext: string) {
@@ -167,6 +193,37 @@ export function PrimitiveTakeoff({
   }
   const downloadCsv = () => download(new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' }), 'csv');
   const downloadPdf = () => download(new Blob([mtoToPdf(result.mto, title) as BlobPart], { type: 'application/pdf' }), 'pdf');
+
+  const renderPropControl = (prop: string, inp: PropertyInput) => {
+    const cur = propValues[prop]?.[inp.name];
+    if (inp.type.kind === 'bool') {
+      const on = cur === true;
+      return (
+        <button type="button" role="switch" aria-checked={on} aria-label={`${prop} ${inp.name}`} onClick={() => setPropInput(prop, inp.name, !on)} className="flex items-center gap-1.5">
+          <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}>
+            <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
+          </span>
+          <span className="text-[11px] text-ink-2">{on ? 'on' : 'off'}</span>
+        </button>
+      );
+    }
+    if (inp.type.kind === 'enum') {
+      const values = inp.type.values;
+      return (
+        <select className="input" aria-label={`${prop} ${inp.name}`} value={String(cur ?? '')} onChange={(e) => setPropInput(prop, inp.name, e.target.value)}>
+          {values.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+      );
+    }
+    const unit = inp.type.kind === 'distance' ? 'mm' : '';
+    return (
+      <div className="flex items-center gap-1.5">
+        <input className="input w-full" inputMode="numeric" aria-label={`${prop} ${inp.name}`} value={typeof cur === 'number' ? cur : 0}
+          onChange={(e) => setPropInput(prop, inp.name, Math.max(0, Number(e.target.value) || 0))} />
+        {unit && <span className="mono text-[11px] text-ink-3">{unit}</span>}
+      </div>
+    );
+  };
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -232,7 +289,7 @@ export function PrimitiveTakeoff({
           <Section index="03" title={`Primitive · ${primitive}${segmented ? ' · segmented' : ''}`}>
             {canSegment && (
               <div className="mb-2.5 flex items-center gap-2">
-                <button onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
+                <button type="button" role="switch" aria-checked={segmented} aria-label="Segmented run" onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
                   <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: segmented ? 'var(--accent)' : 'var(--ink-5)' }}>
                     <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: segmented ? 'translateX(12px)' : 'none' }} />
                   </span>
@@ -266,7 +323,7 @@ export function PrimitiveTakeoff({
                       </select>
                     )}
                     <span className="flex-1" />
-                    {segs.length > 1 && <button className="btn sm danger" onClick={() => setSegs((arr) => arr.filter((_, j) => j !== i))}>×</button>}
+                    {segs.length > 1 && <button className="btn sm danger" aria-label={`Remove segment ${i + 1}`} onClick={() => setSegs((arr) => arr.filter((_, j) => j !== i))}>×</button>}
                   </div>
                 ))}
                 <button className="btn sm self-start" onClick={() => setSegs((arr) => [...arr, { length: 6000, junction: 'corner' }])}>+ Add segment</button>
@@ -353,17 +410,34 @@ export function PrimitiveTakeoff({
 
           {system.properties.length > 0 && (
             <Section index="04" title="Properties">
-              <div className="flex flex-col gap-1.5">
-                {system.properties.map((p) => (
-                  <div key={p.name} className="flex items-center gap-2 rounded border border-line px-3 py-2">
-                    <span className="mono text-[12px] font-semibold">{p.name}</span>
-                    <span className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>{p.archetype}</span>
-                    <span className="flex-1" />
-                    <span className="mono text-[10px] text-ink-3">
-                      scope · {typeof p.scope === 'string' ? p.scope : `per_span:${p.scope.span_name}`}
-                    </span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2">
+                {system.properties.map((p) => {
+                  const editable = p.inputs.filter((i) => i.type.kind !== 'variant');
+                  return (
+                    <div key={p.name} className="overflow-hidden rounded border border-line">
+                      <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-3 py-2">
+                        <span className="mono text-[12px] font-semibold">{p.name}</span>
+                        <span className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>{p.archetype}</span>
+                        <span className="flex-1" />
+                        <span className="mono text-[10px] text-ink-3">
+                          scope · {typeof p.scope === 'string' ? p.scope : `per_span:${p.scope.span_name}`}
+                        </span>
+                      </div>
+                      {editable.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
+                          {editable.map((inp) => (
+                            <label key={inp.name} className="flex flex-col gap-1">
+                              <span className="mono text-[10px] text-ink-3">{inp.label}{inp.label !== inp.name ? ` · ${inp.name}` : ''}</span>
+                              {renderPropControl(p.name, inp)}
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-3 py-2 text-[11px] text-ink-3">No take-off inputs — quantity is derived.</div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Section>
           )}
@@ -385,6 +459,7 @@ export function PrimitiveTakeoff({
                   return (
                     <div key={att.id} className="rounded border" style={{ borderColor: on ? 'var(--accent-line)' : 'var(--line-2)', background: on ? 'var(--panel)' : 'var(--panel-2)' }}>
                       <button
+                        type="button" role="switch" aria-checked={on} aria-label={`Include ${att.role_label}`}
                         onClick={() => setAttState((s) => ({ ...s, [att.id]: { ...s[att.id], attachment_id: att.id, included: !on } }))}
                         className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
                       >

@@ -145,6 +145,7 @@ export const exampleSystems: System[] = [
       { name: 'substrate', group: 'mounting', type: { kind: 'enum', values: ['concrete', 'metal_deck', 'steel'] }, enabled: true, default_value: 'concrete' },
       { name: 'support_grid', group: 'mounting', type: { kind: 'support_grid' }, enabled: true, default_value: null },
       { name: 'flight_max_height', group: 'compliance', type: { kind: 'distance' }, enabled: true, default_value: 8000 },
+      { name: 'landing_side', group: 'geometric', type: { kind: 'enum', values: ['left', 'right'] }, enabled: true, default_value: 'left' },
     ],
     variants: {
       attribute_columns: [{ name: 'has_cage', type: { kind: 'bool' } }],
@@ -187,6 +188,9 @@ export const exampleSystems: System[] = [
           { table_name: 'exit_landing', columns: ['width'], rows: [
             { keys: ['600'], sku: '02415' }, { keys: ['800'], sku: '02662' }, { keys: ['1000'], sku: '02663' },
           ], fallback: { sku: 'EXIT-LANDING' } },
+          { table_name: 'rest_platform', columns: ['side'], rows: [
+            { keys: ['left'], sku: 'REST-PLATFORM-L' }, { keys: ['right'], sku: 'REST-PLATFORM-R' },
+          ], fallback: { sku: 'REST-PLATFORM' } },
         ],
         materials: [
           { id: 'vm-rung', material_id: 'mat-vl-rung', rule: { qty_kind: 'per', per: { kind: 'property', name: 'rungs' }, applies_when: aw } },
@@ -197,7 +201,7 @@ export const exampleSystems: System[] = [
           { id: 'vm-band', material_id: 'mat-vl-cage-band', rule: { qty_kind: 'per', qty: 5, per: { kind: 'derived', name: 'flights' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
           { id: 'vm-exit', material_id: 'mat-vl-exit', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'free_head_count' }, sku_lookup: { table: 'exit_landing', keys: [{ kind: 'property_input', property: 'landing_width', input: 'width' }] }, applies_when: { variants: ['Cage ladder'], criteria: {} } } },
           { id: 'vm-gate', material_id: 'mat-vl-gate', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'free_head_count' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
-          { id: 'vm-rest', material_id: 'mat-vl-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: aw } },
+          { id: 'vm-rest', material_id: 'mat-vl-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, sku_lookup: { table: 'rest_platform', keys: [{ kind: 'modifier', name: 'landing_side' }] }, applies_when: aw } },
           { id: 'vm-deckfix', material_id: 'mat-vl-deckfix', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'place_supports', inputs: {} }, applies_when: { variants: [], criteria: {}, modifiers: { substrate: ['metal_deck'] } } } },
           { id: 'vm-plate', material_id: 'mat-vl-plate', rule: { qty_kind: 'fixed', qty: 1, applies_when: aw } },
         ],
@@ -226,7 +230,7 @@ export const exampleSystems: System[] = [
     },
     criteria: [{ library_id: 'compliance_code', default_value: 'NF_E85-015' }, { library_id: 'wind_zone', default_value: '1' }],
     properties: [
-      { catalog_id: 'uprights', name: 'uprights', archetype: 'count', inputs: [], scope: 'per_mount_surface', placement_rules: { max_spacing: 1500, end_clearance_foot: { max: 150 }, end_clearance_head: { max: 150 } } },
+      { catalog_id: 'uprights', name: 'uprights', archetype: 'count', inputs: [], scope: 'per_mount_surface', placement_rules: { max_spacing: 1500, end_clearance_foot: { max: 150 }, end_clearance_head: { max: 150 }, per_segment: true } },
       { catalog_id: 'include_toeboard', name: 'include_toeboard', archetype: 'count', inputs: [{ name: 'on', label: 'Toeboard', type: { kind: 'bool' }, required: false, default: false }], scope: 'set_level' },
       { catalog_id: 'gates', name: 'gates', archetype: 'count', inputs: [{ name: 'count', label: 'Gates', type: { kind: 'integer' }, required: false, default: 0 }], scope: 'set_level' },
     ],
@@ -243,7 +247,10 @@ export const exampleSystems: System[] = [
           { id: 'em-rail', material_id: 'mat-evo-handrail', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: aw } },
           { id: 'em-knee', material_id: 'mat-evo-kneerail', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: aw } },
           { id: 'em-base', material_id: 'mat-evo-base', rule: { qty_kind: 'per', per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, sku_lookup: { table: 'base', keys: [{ kind: 'modifier', name: 'base_type' }] }, applies_when: aw } },
-          { id: 'em-cw', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 2, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: {} } } },
+          // counterweights per upright scale with the wind zone (2 / 3 / 4 per leg)
+          { id: 'em-cw', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 2, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['1'] } } } },
+          { id: 'em-cw-z2', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 3, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['2'] } } } },
+          { id: 'em-cw-z3', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 4, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['3'] } } } },
           { id: 'em-cw-end', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 1, per: { kind: 'derived', name: 'free_ends_count' }, applies_when: { variants: ['Freestanding'], criteria: {} } } },
           { id: 'em-corner', material_id: 'mat-evo-corner', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'junction_corner' }, applies_when: aw } },
           { id: 'em-cap', material_id: 'mat-evo-endcap', rule: { qty_kind: 'per', qty: 2, per: { kind: 'derived', name: 'free_ends_count' }, applies_when: aw } },

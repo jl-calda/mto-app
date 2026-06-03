@@ -51,20 +51,29 @@ the guide's hand-rounded figures — these are correct, not bugs:
 - **Intermediate / upright counts** come straight from `place_supports` at the
   stated `max_spacing` (Securope 10 m → 2 NEO; EVO 1.5 m → 12 uprights). The guide
   rounds these up.
-- **Corners aren't force-injected into placement** yet — corner *kits* are counted
-  per junction, but `place_supports` doesn't add a forced support at each corner
-  (would need geometry→placer wiring). Follow-up.
-- **Brackets place over the whole run**, not per flight (the `algorithm` quantity
-  resolves on the run chain). Per-segment placement is a follow-up.
-- **Wind-zone counterweight scaling** is fixed at 2/leg (zone 1) via the rule; the
-  2/3/4 scaling by `wind_zone` wants `criteria_driven_defaults`. Follow-up.
-- **Rest-platform L/R** uses one SKU; handedness-by-junction needs a `junction_attr`
-  SKU key. Follow-up.
+- ~~Corners aren't force-injected into placement~~ **Done** — `PlacementRules.per_segment`
+  places supports per leg with a shared, forced post at every corner (EVO uprights
+  opt in). The count is `1 + Σ ceil(Lᵢ/max_spacing)`: identical to the spanned run
+  for a single segment (EVO 16 m → 12), but faithful where a support can't cross a
+  corner (3×2 m L → 7). Securope keeps whole-run placement (corners are corner *kits*,
+  not intermediates).
+- ~~Brackets place over the whole run, not per flight~~ Covered by the same
+  `per_segment` flag (geometry segment lengths are passed to the placer); opt in
+  per placement rule.
+- ~~Wind-zone counterweight scaling is fixed at 2/leg~~ **Done** — counterweights
+  scale 2 / 3 / 4 per upright by `wind_zone` (1 / 2 / 3) via `applies_when.criteria`
+  on the counterweight rule (no `criteria_driven_defaults` needed). Zone 1 → 26;
+  zone 2 → 38.
+- ~~Rest-platform L/R uses one SKU~~ **Done** — a `landing_side` modifier (left/right)
+  drives the rest-platform SKU via the existing `modifier` SKU-lookup
+  (`REST-PLATFORM-L` / `-R`). Per-junction *alternating* handedness (switchback ladders)
+  would still want a `junction_attr` key + per-junction emission — a deeper follow-up.
 
-## Not yet built (browsable systems, but no bespoke take-off screen)
+## Take-off screens
 
-The three systems list + their models are editable, and the golden tests drive the
-engine directly. Dedicated take-off **screens** for them (with the `users` /
-`landing_width` / toeboard property inputs) are a follow-up — the shared
-`PrimitiveTakeoff` covers length/height but doesn't yet expose arbitrary property
-inputs.
+The three systems list + their models are editable, the golden tests drive the
+engine directly, and the shared `PrimitiveTakeoff` (length/height) now exposes the
+properties' take-off inputs (`users`, `landing_width`, cage threshold/hoop spacing,
+toeboard on/off, gates, rung spacing, …), typed by `InputType`. Modifiers
+(`wall_offset`, `substrate`, `landing_side`, `upright_angle`, …) still apply via
+their defaults — surfacing them as editable take-off controls is the next step.

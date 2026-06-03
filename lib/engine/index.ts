@@ -305,6 +305,7 @@ function resolveModel(
       const gridKey = Object.keys(modifierValues).find((k) => /support_grid|grid/i.test(k));
       const out = algo.run({
         length: chainLength(chain),
+        segments: geometry.segments.map((s) => chainLength(s.dimension_chain)),
         stock_options: mat?.stock_options ?? [],
         placement_rules: system.properties.find((p) => p.placement_rules)?.placement_rules,
         support_grid: gridKey ? modifierValues[gridKey] : undefined,

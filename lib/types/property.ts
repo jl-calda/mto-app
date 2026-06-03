@@ -52,6 +52,14 @@ export type PlacementRules = {
   min_count_in_region?: { from: 'foot' | 'head'; distance: number; min: number }[];
   forbidden_zones?: { start: number; end: number }[];
   required_positions?: number[];
+  /**
+   * Place supports per segment (per flight/leg) instead of spanning the whole
+   * run: each segment gets a support at both ends, so one lands at every corner,
+   * and adjacent segments share that boundary post. Spanning a support across a
+   * corner is physically impossible, so this is the faithful count for runs with
+   * junctions. Off (default) = single placement over the whole run chain.
+   */
+  per_segment?: boolean;
 };
 
 export type PropertyInstance = {
