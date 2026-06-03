@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
 import { VersionTimeline } from '@/components/version-history/VersionTimeline';
-import { Field, NumberInput, Select, TextInput, Toggle } from '@/components/system-wizard/parts';
+import { Field, NumberInput, Select, Toggle } from '@/components/system-wizard/parts';
+import { TokenInput } from '@/components/inputs';
 import { HelpButton } from '@/components/help/help-button';
 import { publishSubAssemblyAction, saveSubAssemblyAction } from '@/app/sub-assemblies/actions';
 import { blankParam, blankSam, coerceParamDefault } from '@/lib/subassembly-authoring';
@@ -396,9 +397,9 @@ function RuleEditor({ rule, paramNames, onChange, sku }: { rule: Rule; paramName
     <div className="grid grid-cols-3 gap-2 p-2.5">
       <Knob n="01" label="Applies when">
         <div className="flex flex-col gap-1.5">
-          <Field label="variants (csv)">
-            <TextInput mono value={(rule.applies_when.variants ?? []).join(', ')}
-              onChange={(v) => patch({ applies_when: { ...rule.applies_when, variants: v.split(',').map((s) => s.trim()).filter(Boolean) } })} />
+          <Field label="variants" hint="names matched at inline-resolution time">
+            <TokenInput value={rule.applies_when.variants ?? []}
+              onChange={(vals) => patch({ applies_when: { ...rule.applies_when, variants: vals } })} />
           </Field>
           <RecordCsvEditor label="criteria" value={rule.applies_when.criteria ?? {}}
             onChange={(criteria) => patch({ applies_when: { ...rule.applies_when, criteria } })} />
@@ -443,10 +444,9 @@ function RuleEditor({ rule, paramNames, onChange, sku }: { rule: Rule; paramName
 function RecordCsvEditor({ label, value, onChange }: { label: string; value: Record<string, string[]>; onChange: (v: Record<string, string[]>) => void }) {
   const [newKey, setNewKey] = useState('');
   const entries = Object.entries(value);
-  const setVals = (k: string, csv: string) => {
-    const vals = csv.split(',').map((s) => s.trim()).filter(Boolean);
+  const setVals = (k: string, vals: string[]) => {
     const next = { ...value };
-    if (vals.length) next[k] = vals; else delete next[k];
+    if (vals.length) next[k] = vals; else next[k] = [];
     onChange(next);
   };
   const removeKey = (k: string) => { const next = { ...value }; delete next[k]; onChange(next); };
@@ -457,7 +457,7 @@ function RecordCsvEditor({ label, value, onChange }: { label: string; value: Rec
       {entries.map(([k, vals]) => (
         <div key={k} className="flex items-center gap-1">
           <span className="mono w-20 shrink-0 truncate text-[10px] text-ink-3">{k}</span>
-          <input className="input mono w-full" value={vals.join(', ')} onChange={(e) => setVals(k, e.target.value)} />
+          <div className="w-full"><TokenInput value={vals} onChange={(nv) => setVals(k, nv)} /></div>
           <button className="btn sm danger" aria-label={`Remove ${label} ${k}`} onClick={() => removeKey(k)}>×</button>
         </div>
       ))}

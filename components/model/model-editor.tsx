@@ -8,7 +8,8 @@ import { Visual } from '@/components/visual';
 import { VisualEditor } from '@/components/visual-editor';
 import { DeleteButton } from '@/components/delete-button';
 import { HelpButton } from '@/components/help/help-button';
-import { Field, NumberInput, Select, TextInput } from '@/components/system-wizard/parts';
+import { Field, NumberInput, Select } from '@/components/system-wizard/parts';
+import { ChipsControl, TokenInput, Control, resolveCriterion } from '@/components/inputs';
 import type { AlgorithmName, Material, Model, ModelMaterial, PerTarget, Rule, System, SystemVariantRef } from '@/lib/types';
 
 function rowLabel(r: SystemVariantRef): string {
@@ -119,8 +120,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
     const vs = selected.rule.applies_when.variants ?? [];
     updateRule({ applies_when: { ...selected.rule.applies_when, variants: vs.includes(name) ? vs.filter((v) => v !== name) : [...vs, name] } });
   };
-  const setCriterion = (libId: string, csv: string) => {
-    const vals = csv.split(',').map((s) => s.trim()).filter(Boolean);
+  const setCriterionVals = (libId: string, vals: string[]) => {
     const crit = { ...selected.rule.applies_when.criteria };
     if (vals.length) crit[libId] = vals; else delete crit[libId];
     updateRule({ applies_when: { ...selected.rule.applies_when, criteria: crit } });
@@ -184,9 +184,9 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
           <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
             <h3 className="m-0 text-[13px] font-semibold">Materials</h3>
             <div className="flex items-center gap-1.5">
-              <select className="input text" style={{ fontSize: 12, maxWidth: 180 }} value={addId} onChange={(e) => setAddId(e.target.value)}>
-                {materials.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
+              <div style={{ maxWidth: 180 }}>
+                <Select value={addId} options={materials.map((m) => ({ value: m.id, label: m.name }))} onChange={setAddId} />
+              </div>
               <button className="btn primary sm" onClick={addMaterial}>Add</button>
             </div>
           </header>
@@ -233,11 +233,19 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                     </div>
                     {system.criteria.length > 0 && (
                       <div className="mt-2 grid grid-cols-2 gap-2">
-                        {system.criteria.map((c) => (
-                          <Field key={c.library_id} label={c.library_id} hint="allowed (comma) · empty = any">
-                            <TextInput value={(r.applies_when.criteria[c.library_id] ?? []).join(', ')} onChange={(v) => setCriterion(c.library_id, v)} />
-                          </Field>
-                        ))}
+                        {system.criteria.map((c) => {
+                          const known = ctx.criteria[c.library_id] ?? [];
+                          const sel = r.applies_when.criteria[c.library_id] ?? [];
+                          return (
+                            <Field key={c.library_id} label={c.library_id} hint="gate values · empty = any">
+                              {known.length > 0 ? (
+                                <ChipsControl options={known.map((v) => ({ value: v, label: v }))} value={sel} onChange={(vals) => setCriterionVals(c.library_id, vals)} />
+                              ) : (
+                                <TokenInput value={sel} onChange={(vals) => setCriterionVals(c.library_id, vals)} />
+                              )}
+                            </Field>
+                          );
+                        })}
                       </div>
                     )}
                   </Knob>
@@ -289,7 +297,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                     </Field>
                     <Field label={`primitive · ${system.primitive.kind}`}><NumberInput value={primitive} onChange={setPrimitive} /></Field>
                     {system.criteria.map((c) => (
-                      <Field key={c.library_id} label={c.library_id}><TextInput value={criteria[c.library_id] ?? ''} onChange={(v) => setCriteria((s) => ({ ...s, [c.library_id]: v }))} /></Field>
+                      <Field key={c.library_id} label={c.library_id}><Control descriptor={resolveCriterion({ options: ctx.criteria[c.library_id] })} value={criteria[c.library_id] ?? ''} onChange={(v) => setCriteria((s) => ({ ...s, [c.library_id]: String(v ?? '') }))} /></Field>
                     ))}
                     {system.properties.flatMap((p) => p.inputs.filter((i) => typeof i.default === 'number').map((inp) => (
                       <Field key={`${p.name}.${inp.name}`} label={`${p.name}.${inp.name}`}>

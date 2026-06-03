@@ -4,16 +4,25 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AttrValue, Variant, Visual } from '@/lib/types';
 import { Field, Select, TextInput } from '@/components/system-wizard/parts';
+import { NumberControl, ToggleControl } from '@/components/inputs';
 import { VisualEditor } from '@/components/visual-editor';
 import { saveVariantAction, deleteVariantAction, publishVariantAction } from '@/app/variants/actions';
 
 const STATUS = ['active', 'deprecated', 'archived'] as const;
+const ATTR_TYPES = ['text', 'number', 'bool'] as const;
+type AttrType = (typeof ATTR_TYPES)[number];
+type AttrRow = { key: string; value: string; type: AttrType };
 
-function coerce(v: string): AttrValue {
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  if (v !== '' && !Number.isNaN(Number(v))) return Number(v);
-  return v;
+function inferType(v: AttrValue): AttrType {
+  if (typeof v === 'boolean') return 'bool';
+  if (typeof v === 'number') return 'number';
+  return 'text';
+}
+// Build the typed attribute value from a row, per the explicitly-chosen type.
+function typedValue(row: AttrRow): AttrValue {
+  if (row.type === 'bool') return row.value === 'true';
+  if (row.type === 'number') { const n = Number(row.value); return Number.isFinite(n) ? n : 0; }
+  return row.value;
 }
 
 export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; isNew: boolean; onClose: () => void }) {
@@ -22,21 +31,21 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
   const [description, setDescription] = useState(variant.description ?? '');
   const [status, setStatus] = useState(variant.status);
   const [visual, setVisual] = useState<Visual | undefined>(variant.visual);
-  const [attrs, setAttrs] = useState<{ key: string; value: string }[]>(
-    Object.entries(variant.common_attributes).map(([k, v]) => ({ key: k, value: String(v) })),
+  const [attrs, setAttrs] = useState<AttrRow[]>(
+    Object.entries(variant.common_attributes).map(([k, v]) => ({ key: k, value: String(v), type: inferType(v) })),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [changelog, setChangelog] = useState('');
 
-  const setAttr = (i: number, patch: Partial<{ key: string; value: string }>) =>
+  const setAttr = (i: number, patch: Partial<AttrRow>) =>
     setAttrs((a) => a.map((row, j) => (j === i ? { ...row, ...patch } : row)));
 
   async function publish() {
     if (isNew) { setError('save first, then publish'); return; }
     setBusy(true);
     setError(undefined);
-    const common_attributes = Object.fromEntries(attrs.filter((a) => a.key.trim()).map((a) => [a.key.trim(), coerce(a.value)]));
+    const common_attributes = Object.fromEntries(attrs.filter((a) => a.key.trim()).map((a) => [a.key.trim(), typedValue(a)]));
     const res = await publishVariantAction({ ...variant, name, description: description || undefined, status, visual, common_attributes }, changelog);
     setBusy(false);
     if (res.ok) { router.refresh(); onClose(); }
@@ -46,7 +55,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
   async function save() {
     setBusy(true);
     setError(undefined);
-    const common_attributes = Object.fromEntries(attrs.filter((a) => a.key.trim()).map((a) => [a.key.trim(), coerce(a.value)]));
+    const common_attributes = Object.fromEntries(attrs.filter((a) => a.key.trim()).map((a) => [a.key.trim(), typedValue(a)]));
     const payload: Variant = {
       ...variant,
       name,
@@ -93,13 +102,22 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
       <div className="overflow-hidden rounded-md border border-line bg-panel">
         <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
           <h3 className="m-0 text-[13px] font-semibold">Common attributes</h3>
-          <button className="btn sm" onClick={() => setAttrs((a) => [...a, { key: '', value: '' }])}>Add attribute</button>
+          <button className="btn sm" onClick={() => setAttrs((a) => [...a, { key: '', value: '', type: 'text' }])}>Add attribute</button>
         </header>
         <div className="flex flex-col gap-2 p-3.5">
           {attrs.map((row, i) => (
-            <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+            <div key={i} className="grid grid-cols-[minmax(0,1fr)_88px_minmax(0,1fr)_auto] items-end gap-2">
               <Field label="key"><TextInput mono value={row.key} onChange={(v) => setAttr(i, { key: v })} /></Field>
-              <Field label="value" hint="true/false or number coerced"><TextInput mono value={row.value} onChange={(v) => setAttr(i, { value: v })} /></Field>
+              <Field label="type"><Select value={row.type} options={ATTR_TYPES} onChange={(t) => setAttr(i, { type: t })} /></Field>
+              <Field label="value">
+                {row.type === 'bool' ? (
+                  <ToggleControl on={row.value === 'true'} onChange={(b) => setAttr(i, { value: b ? 'true' : 'false' })} ariaLabel="value" />
+                ) : row.type === 'number' ? (
+                  <NumberControl value={Number(row.value) || 0} onChange={(n) => setAttr(i, { value: String(n) })} ariaLabel="value" />
+                ) : (
+                  <TextInput mono value={row.value} onChange={(v) => setAttr(i, { value: v })} />
+                )}
+              </Field>
               <button className="btn sm danger" aria-label="Remove attribute" onClick={() => setAttrs((a) => a.filter((_, j) => j !== i))}>×</button>
             </div>
           ))}
