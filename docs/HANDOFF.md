@@ -1,5 +1,22 @@
 # Handoff — MTO app (state at 2026-06-03)
 
+## ⮕ Session handoff (branch `claude/takeoff-modifiers-criteria-fPnTV`, latest)
+**Repo:** `/home/user/mto-app` · Next.js (App Router), TS, Tailwind v4 + CSS tokens. **Backend:** in‑memory seed by default (`lib/repo/memory-repo.ts`); Supabase when `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY` set. **Repo interface is symmetric** — add every method to BOTH memory + supabase impls (`lib/repo/*`). **Engine `lib/engine/*` is pure & data‑driven — don't change its semantics.**
+**Health:** `npm run typecheck && npm run build && npm test` → **88 tests green**. Branch pushed; **no PR opened** (open only if asked).
+
+**Shipped this session (newest first):**
+1. **Guide → realtime dependency graph.** `lib/help/tree.ts` (`buildSystemTree`, `GENERIC_TREE`) → an **Inputs**(Measurement/Variants/Modifiers/Criteria/Properties, with property→variant gating chips) **→ Outputs**(Models→MTO) columned node‑link in `components/help/dependency-graph.tsx`. Panel is **tabbed**: `Tree` (default) | `Glossary`. Help context gained `subject`/`setSubject` + `view`/`setView`; pages publish via `components/help/help-subject.tsx` (system detail page) and a live `useEffect` in `SystemWizard`. **Deferred:** live take‑off tree (take‑off screens use the generic fallback; engine already exposes `trace`/`chain`/`mto` sources to build it).
+2. **System wizard reorder.** Steps now `Primitive → Variants & criteria → Modifiers → Properties`; the **variant×property matrix moved into the Properties step** (was stranded in Variants). Files: `components/system-wizard/{SystemWizard,Step3Variants,PropertiesEditor}.tsx`. Presentational only.
+3. **Type‑driven inputs.** `components/inputs/` (`resolve-control.ts` pure resolver + `controls.tsx` `TypedField`/Select/Chips/Token/Number/**Band**/Toggle/Text/Advanced). Adopted in take‑off (`primitive-takeoff.tsx`, `area-takeoff.tsx`) and authoring (`model-editor`, `subassemblies-browser`, `variant-editor`). **Fixed:** `banded_distance` now shows bands (was an unbounded box) — shared pure `lib/engine/bands.ts` `activeBandIndex`; `support_grid`/`discrete_set` now visible as "advanced"; criteria show "list" vs "free text"; CSV pick‑lists → chips.
+4. **In‑app Guide** (`components/help/*`, `lib/help/content.ts`) + persistent TopBar **Guide** button focused per active tab (`topicForNav`).
+5. **Button/logic audit:** delete actions for Project/System/Model/Take‑off (+ guards `lib/repo/guards.ts`; fixed supabase `saveTakeoff`/`deleteTakeoff` project‑payload sync); full **sub‑assembly** + **attachment** authoring; area/volume sidebar links fixed.
+
+**Conventions:** new pure logic → `lib/**` with a co‑located `*.test.ts` (vitest). UI reuses CSS tokens (`bg-panel`, `border-line`, `var(--accent)`, `.tag`, `.uc`) and `Icon.*` from `components/chrome.tsx`. Server actions return `{ok,id?,error?}` and `revalidatePath`. **Gotcha:** don't `pkill -f next` to free the dev port (it matches your own shell) — use `fuser -k 3000/tcp`. Verify UI via `npm run start` + curl (the panel/tree render client‑side once opened).
+
+**Open ideas / next:** live take‑off resolution tree; widen Guide panel (currently 360px, columns scroll horizontally); a11y/render tests; sub‑assembly SKU‑lookup table authoring.
+
+---
+
 **Branch:** `claude/awesome-carson-jmyxN` — open in **PR #6** → `claude/trusting-meitner-VEsKg` (production branch). **Not merged yet** → production still serves a *build-time snapshot* until #6 lands.
 **Health:** `npm run typecheck` + `npm run build` (all 22 routes `ƒ` dynamic) + `npm test` → **58 tests** green.
 
