@@ -170,3 +170,15 @@ export const MAP_EDGES: MapEdge[] = [
   { from: 'model', to: 'takeoff' },
   { from: 'takeoff', to: 'mto' },
 ];
+
+// Which concept the Guide should focus on for a given nav tab (Shell's navActive).
+// Tabs without a matching core concept (materials, inventory) open the overview.
+export function topicForNav(navActive?: string): ConceptId | null {
+  switch (navActive) {
+    case 'projects': return 'takeoff';
+    case 'systems': return 'system';
+    case 'variants': return 'variant';
+    case 'subassemblies': return 'subassembly';
+    default: return null; // materials, inventory, unknown → overview
+  }
+}
