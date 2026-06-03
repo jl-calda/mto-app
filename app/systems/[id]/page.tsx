@@ -6,6 +6,7 @@ import { PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
 import { AttachmentsEditor } from '@/components/system-wizard/AttachmentsEditor';
 import { HelpButton } from '@/components/help/help-button';
+import { HelpSubjectSystem } from '@/components/help/help-subject';
 import { getRepo } from '@/lib/repo';
 import type { ConceptId } from '@/lib/help/content';
 import type { PrimitiveKind } from '@/lib/types';
@@ -25,6 +26,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
   return (
     <Shell navActive="systems" crumbs={[{ label: 'Systems', href: '/systems' }, { label: system.name }]}>
       <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
+        <HelpSubjectSystem system={system} />
         <div className="flex items-end justify-between border-b border-line pb-3.5">
           <div className="flex items-center gap-3">
             <Visual visual={system.visual} name={system.name} size={40} rounded={6} />

@@ -1,43 +1,64 @@
 'use client';
 
-// The Guide panel body: a concept map, the four-way comparison table, and one
-// expandable card per concept. Deep-links from triggers/map nodes expand the
-// matching card and scroll it into view.
+// The Guide panel body: a "Tree" tab (the Inputs→Outputs dependency graph of the
+// current screen) and a "Glossary" tab (the four-way comparison + concept cards).
+// (i)/node clicks deep-link to the Glossary tab focused on a concept.
 
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/chrome';
 import { useHelp } from './help-context';
-import { ConceptMap } from './concept-map';
+import { DependencyGraph } from './dependency-graph';
+import { GENERIC_TREE } from '@/lib/help/tree';
 import { COMPARE_ROWS, CONCEPTS, type Concept } from '@/lib/help/content';
 
 export function HelpPanel() {
-  const { topic, close } = useHelp();
+  const { topic, close, subject, view, setView } = useHelp();
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    if (!topic) return;
+    if (view !== 'glossary' || !topic) return;
     cardRefs.current[topic]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [topic]);
+  }, [topic, view]);
 
   return (
     <div className="flex h-full flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
-        <h3 className="m-0 text-[13px] font-semibold">Guide</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="m-0 text-[13px] font-semibold">Guide</h3>
+          <div className="flex gap-0.5">
+            {(['tree', 'glossary'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setView(t)}
+                className="rounded px-2 py-0.5 text-[11px] capitalize"
+                style={{ background: view === t ? 'var(--selected)' : 'var(--bg-2)', color: view === t ? 'var(--accent)' : 'var(--ink-2)', fontWeight: view === t ? 600 : 400 }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
         <button type="button" className="btn ghost sm" onClick={close} aria-label="Close guide"><Icon.X /></button>
       </header>
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3.5">
-        <p className="m-0 text-[12px] text-ink-2">
-          A system offers four kinds of choice — <b>variants</b>, <b>modifiers</b>, <b>criteria</b> and{' '}
-          <b>properties</b> — which a <b>model</b> turns into materials. A <b>take-off</b> fills them in and the engine produces the <b>MTO</b>.
-        </p>
-        <ConceptMap />
-        <ComparisonTable />
-        <div className="flex flex-col gap-2">
-          {CONCEPTS.map((c) => (
-            <ConceptCard key={c.id} concept={c} defaultOpen={c.id === topic} ref={(el) => { cardRefs.current[c.id] = el; }} />
-          ))}
+
+      {view === 'tree' ? (
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3.5">
+          <p className="m-0 text-[12px] text-ink-2">
+            What goes <b>in</b> (variants, modifiers, criteria, properties) and what comes <b>out</b> (models → MTO){subject ? ' for this system' : ''}. Click a box to read about it.
+          </p>
+          <DependencyGraph model={subject ?? GENERIC_TREE} />
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3.5">
+          <ComparisonTable />
+          <div className="flex flex-col gap-2">
+            {CONCEPTS.map((c) => (
+              <ConceptCard key={c.id} concept={c} defaultOpen={c.id === topic} ref={(el) => { cardRefs.current[c.id] = el; }} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
