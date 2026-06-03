@@ -7,6 +7,17 @@ import { diffNames } from '@/lib/versioning';
 
 export type MutateResult = { ok: boolean; id: string; error?: string };
 
+/** Persist the working draft (parameters + materials) without cutting a version. */
+export async function saveSubAssemblyAction(sa: SubAssembly): Promise<MutateResult> {
+  try {
+    await getRepo().saveSubAssembly(sa);
+    revalidatePath('/sub-assemblies');
+    return { ok: true, id: sa.id };
+  } catch (e) {
+    return { ok: false, id: sa.id, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Publish the current parameters + materials as a new sub-assembly version. */
 export async function publishSubAssemblyAction(sa: SubAssembly, changelog: string): Promise<MutateResult> {
   try {
