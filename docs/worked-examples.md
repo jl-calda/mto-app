@@ -51,11 +51,15 @@ the guide's hand-rounded figures — these are correct, not bugs:
 - **Intermediate / upright counts** come straight from `place_supports` at the
   stated `max_spacing` (Securope 10 m → 2 NEO; EVO 1.5 m → 12 uprights). The guide
   rounds these up.
-- **Corners aren't force-injected into placement** yet — corner *kits* are counted
-  per junction, but `place_supports` doesn't add a forced support at each corner
-  (would need geometry→placer wiring). Follow-up.
-- **Brackets place over the whole run**, not per flight (the `algorithm` quantity
-  resolves on the run chain). Per-segment placement is a follow-up.
+- ~~Corners aren't force-injected into placement~~ **Done** — `PlacementRules.per_segment`
+  places supports per leg with a shared, forced post at every corner (EVO uprights
+  opt in). The count is `1 + Σ ceil(Lᵢ/max_spacing)`: identical to the spanned run
+  for a single segment (EVO 16 m → 12), but faithful where a support can't cross a
+  corner (3×2 m L → 7). Securope keeps whole-run placement (corners are corner *kits*,
+  not intermediates).
+- ~~Brackets place over the whole run, not per flight~~ Covered by the same
+  `per_segment` flag (geometry segment lengths are passed to the placer); opt in
+  per placement rule.
 - **Wind-zone counterweight scaling** is fixed at 2/leg (zone 1) via the rule; the
   2/3/4 scaling by `wind_zone` wants `criteria_driven_defaults`. Follow-up.
 - **Rest-platform L/R** uses one SKU; handedness-by-junction needs a `junction_attr`

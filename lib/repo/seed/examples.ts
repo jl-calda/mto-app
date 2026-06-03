@@ -226,7 +226,7 @@ export const exampleSystems: System[] = [
     },
     criteria: [{ library_id: 'compliance_code', default_value: 'NF_E85-015' }, { library_id: 'wind_zone', default_value: '1' }],
     properties: [
-      { catalog_id: 'uprights', name: 'uprights', archetype: 'count', inputs: [], scope: 'per_mount_surface', placement_rules: { max_spacing: 1500, end_clearance_foot: { max: 150 }, end_clearance_head: { max: 150 } } },
+      { catalog_id: 'uprights', name: 'uprights', archetype: 'count', inputs: [], scope: 'per_mount_surface', placement_rules: { max_spacing: 1500, end_clearance_foot: { max: 150 }, end_clearance_head: { max: 150 }, per_segment: true } },
       { catalog_id: 'include_toeboard', name: 'include_toeboard', archetype: 'count', inputs: [{ name: 'on', label: 'Toeboard', type: { kind: 'bool' }, required: false, default: false }], scope: 'set_level' },
       { catalog_id: 'gates', name: 'gates', archetype: 'count', inputs: [{ name: 'count', label: 'Gates', type: { kind: 'integer' }, required: false, default: 0 }], scope: 'set_level' },
     ],

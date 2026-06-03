@@ -69,13 +69,45 @@ export function placeOptimal(length: number, rules: PlacementRules, grid?: Suppo
   return finalize(positions, length, rules, grid);
 }
 
+/** Even posts across [0, length] at ≤ max_spacing, INCLUDING both endpoints. */
+function evenSpan(length: number, rules: PlacementRules): number[] {
+  const maxSpacing = rules.max_spacing ?? length;
+  const intervals = Math.max(1, Math.ceil(length / Math.max(1, maxSpacing)));
+  return Array.from({ length: intervals + 1 }, (_, i) => (length * i) / intervals);
+}
+
+/**
+ * Per-segment (per-flight) placement with a forced, shared support at each
+ * junction: every segment gets evenly-spaced posts including one at BOTH ends,
+ * so a support lands at every corner; adjacent segments share that boundary post
+ * (identical global position → de-duplicated). Faithful for runs with corners,
+ * where a support cannot span the junction.
+ */
+export function placeSegmented(segments: number[], rules: PlacementRules, grid?: SupportGrid): number[] {
+  const all: number[] = [];
+  let start = 0;
+  for (const L of segments) {
+    if (L > 0) for (const p of finalize(evenSpan(L, rules), L, rules, grid)) all.push(start + p);
+    start += L;
+  }
+  return [...new Set(all.map((p) => Math.round(p)))].sort((a, b) => a - b);
+}
+
+/** Positive segment lengths passed by the engine (geometry → algorithm). */
+function segLengths(input: Record<string, unknown>): number[] {
+  const segs = input.segments;
+  return Array.isArray(segs) ? segs.map((s) => Number(s) || 0).filter((n) => n > 0) : [];
+}
+
 export const placeSupports: Algorithm = {
   name: 'place_supports',
   outputFields: ['supports'],
   run(input) {
     const length = Number(input.length) || 0;
     const rules = (input.placement_rules as PlacementRules | undefined) ?? {};
-    const positions = place(length, rules, input.support_grid as SupportGrid | undefined);
+    const grid = input.support_grid as SupportGrid | undefined;
+    const segs = segLengths(input);
+    const positions = rules.per_segment && segs.length > 1 ? placeSegmented(segs, rules, grid) : place(length, rules, grid);
     return { fields: { supports: positions.length }, detail: { positions } };
   },
 };
@@ -87,7 +119,9 @@ export const placeSupportsOptimal: Algorithm = {
   run(input) {
     const length = Number(input.length) || 0;
     const rules = (input.placement_rules as PlacementRules | undefined) ?? {};
-    const positions = placeOptimal(length, rules, input.support_grid as SupportGrid | undefined);
+    const grid = input.support_grid as SupportGrid | undefined;
+    const segs = segLengths(input);
+    const positions = rules.per_segment && segs.length > 1 ? placeSegmented(segs, rules, grid) : placeOptimal(length, rules, grid);
     return { fields: { supports: positions.length }, detail: { positions } };
   },
 };
