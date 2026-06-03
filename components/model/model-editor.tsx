@@ -3,9 +3,10 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deriveRuleContext, evaluateRuleAgainstSample } from '@/lib/engine';
-import { saveModelAction } from '@/app/models/actions';
+import { saveModelAction, deleteModelAction } from '@/app/models/actions';
 import { Visual } from '@/components/visual';
 import { VisualEditor } from '@/components/visual-editor';
+import { DeleteButton } from '@/components/delete-button';
 import { Field, NumberInput, Select, TextInput } from '@/components/system-wizard/parts';
 import type { AlgorithmName, Material, Model, ModelMaterial, PerTarget, Rule, System, SystemVariantRef } from '@/lib/types';
 
@@ -159,6 +160,16 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
           {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
           <Select value={model.status} options={['draft', 'published', 'deprecated'] as const} onChange={(v) => setModel((m) => ({ ...m, status: v }))} />
+          {!isNew && (
+            <DeleteButton
+              label="Delete"
+              title="Delete model"
+              className="btn sm danger"
+              confirmMessage={`Delete model "${model.name}"? This cannot be undone.`}
+              onDelete={() => deleteModelAction(model.id, model.system_id)}
+              onDeleted={() => router.push(`/systems/${model.system_id}`)}
+            />
+          )}
           <button className="btn primary sm" onClick={save} disabled={status === 'saving'}>{status === 'saving' ? 'Saving…' : 'Save'}</button>
         </div>
       </div>

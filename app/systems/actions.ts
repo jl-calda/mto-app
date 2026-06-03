@@ -4,6 +4,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/lib/repo';
+import { systemDeleteBlock } from '@/lib/repo/guards';
 import type { System } from '@/lib/types';
 
 export type SaveSystemResult = { ok: boolean; id: string; error?: string };
@@ -16,5 +17,20 @@ export async function saveSystemAction(system: System): Promise<SaveSystemResult
     return { ok: true, id: saved.id };
   } catch (e) {
     return { ok: false, id: system.id, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function deleteSystemAction(id: string): Promise<SaveSystemResult> {
+  try {
+    const repo = getRepo();
+    const system = await repo.getSystem(id);
+    if (!system) return { ok: false, id, error: 'system not found' };
+    const blocked = systemDeleteBlock(system, await repo.listTakeoffs());
+    if (blocked) return { ok: false, id, error: blocked };
+    await repo.deleteSystem(id);
+    revalidatePath('/systems');
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, id, error: e instanceof Error ? e.message : String(e) };
   }
 }

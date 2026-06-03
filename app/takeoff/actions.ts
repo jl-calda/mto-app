@@ -52,3 +52,14 @@ export async function saveTakeoffAction(projectId: string, takeoff: Takeoff): Pr
     return { ok: false, savedAt: 0, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+export async function deleteTakeoffAction(projectId: string, id: string): Promise<CreateResult> {
+  try {
+    await getRepo().deleteTakeoff(projectId, id);
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath('/');
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, id, error: e instanceof Error ? e.message : String(e) };
+  }
+}

@@ -16,3 +16,14 @@ export async function saveProjectAction(project: Project): Promise<SaveProjectRe
     return { ok: false, id: project.id, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+export async function deleteProjectAction(id: string): Promise<SaveProjectResult> {
+  try {
+    await getRepo().deleteProject(id);
+    revalidatePath('/');
+    revalidatePath('/projects');
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, id, error: e instanceof Error ? e.message : String(e) };
+  }
+}

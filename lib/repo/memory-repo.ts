@@ -19,6 +19,10 @@ export function createMemoryRepo(): Repository {
       else seed.projects.push(project);
       return project;
     },
+    async deleteProject(id) {
+      const i = seed.projects.findIndex((p) => p.id === id);
+      if (i >= 0) seed.projects.splice(i, 1);
+    },
     async listSystems() {
       return seed.systems;
     },
@@ -30,6 +34,10 @@ export function createMemoryRepo(): Repository {
       if (i >= 0) seed.systems[i] = system;
       else seed.systems.push(system);
       return system;
+    },
+    async deleteSystem(id) {
+      const i = seed.systems.findIndex((s) => s.id === id);
+      if (i >= 0) seed.systems.splice(i, 1); // nested models go with it
     },
     async listModels(systemId) {
       const all = allModels();
@@ -45,6 +53,12 @@ export function createMemoryRepo(): Repository {
       if (i >= 0) sys.models[i] = model;
       else sys.models.push(model);
       return model;
+    },
+    async deleteModel(id) {
+      for (const sys of seed.systems) {
+        const i = sys.models.findIndex((m) => m.id === id);
+        if (i >= 0) { sys.models.splice(i, 1); return; }
+      }
     },
     async listMaterials() {
       return seed.materials;
@@ -115,6 +129,12 @@ export function createMemoryRepo(): Repository {
       if (i >= 0) project.takeoffs[i] = takeoff;
       else project.takeoffs.push(takeoff);
       return takeoff;
+    },
+    async deleteTakeoff(projectId, id) {
+      const project = seed.projects.find((p) => p.id === projectId);
+      if (!project) return;
+      const i = project.takeoffs.findIndex((t) => t.id === id);
+      if (i >= 0) project.takeoffs.splice(i, 1);
     },
   };
 }
