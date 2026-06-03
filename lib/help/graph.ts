@@ -8,7 +8,7 @@
 // then the structural backbone material → model → MTO (feeds). No React; tested
 // in isolation. Standalone (no import from tree.ts) to avoid a cycle.
 
-import type { Material, System, SystemVariantRef } from '@/lib/types';
+import type { Material, System, SystemVariantRef, Visual } from '@/lib/types';
 import { MAP_EDGES, MAP_NODES, type ConceptId } from './content';
 
 export type GraphNodeKind =
@@ -34,6 +34,8 @@ export interface GraphNode {
   concept?: ConceptId;
   /** Material nodes: the owning model's name. */
   model?: string;
+  /** Material nodes: the catalogue visual (icon/image/placeholder). */
+  visual?: Visual;
 }
 export interface GraphEdge {
   id: string;
@@ -109,7 +111,7 @@ export function buildSystemGraph(system: System, materials: Material[] = []): Gr
       const cat = byId.get(mm.material_id);
       addNode({
         id: M, kind: 'material', label: cat?.name ?? mm.material_id,
-        sub: cat ? `${cat.sku} · ${cat.unit}` : undefined, model: model.name,
+        sub: cat ? `${cat.sku} · ${cat.unit}` : undefined, model: model.name, visual: cat?.visual,
       });
       const r = mm.rule;
       // gate — which inputs decide whether this material applies

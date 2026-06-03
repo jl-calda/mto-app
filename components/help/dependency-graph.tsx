@@ -12,7 +12,7 @@
 // zoom. So a system's wide inputs→materials graph reads left-to-right (the long
 // dimension scrolls), while the deep/narrow generic concept map stays top-down.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   ReactFlow, ReactFlowProvider, Background, BackgroundVariant, Controls, Panel,
   Handle, Position, MarkerType, useNodesState, useEdgesState, useReactFlow,
@@ -20,12 +20,13 @@ import {
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import { useHelp } from './help-context';
+import { Visual } from '@/components/visual';
 import { CONCEPT_BY_ID } from '@/lib/help/content';
 import { buildGenericGraph, type GraphEdge, type GraphEdgeRole, type GraphModel, type GraphNode } from '@/lib/help/graph';
 import type { TreeModel } from '@/lib/help/tree';
 
 const NODE_W = 184;
-const NODE_H = 48;
+const NODE_H = 54;
 
 const ROLE_COLOR: Record<GraphEdgeRole, string> = {
   gate: 'var(--ink-3)',
@@ -40,19 +41,29 @@ const ROLE_LABEL: Record<GraphEdgeRole, string> = {
 
 type FlowData = GraphNode & { lr: boolean };
 
+const LABEL_STYLE: CSSProperties = { fontSize: 12, color: 'var(--ink)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const SUB_STYLE: CSSProperties = { fontSize: 9, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const KIND_LABEL: Record<string, string> = {
+  measurement: 'Measurement', variant: 'Variant', modifier: 'Modifier', criterion: 'Criterion', property: 'Property',
+};
+const INPUT_KINDS = new Set(['measurement', 'variant', 'modifier', 'criterion', 'property']);
+
 // ── custom node (one component, styled by kind/concept) ──
+// Inputs lead with a coloured dot + UPPERCASE kind so their type is unmistakable;
+// materials lead with their catalogue icon.
 function FlowNode({ data }: NodeProps) {
   const d = data as unknown as FlowData;
   const color = d.concept ? CONCEPT_BY_ID[d.concept].color : 'var(--ink-3)';
   const material = d.kind === 'material';
   const mto = d.kind === 'mto';
+  const isInput = INPUT_KINDS.has(d.kind);
   const clickable = material || !!d.concept;
   return (
     <div
       title={d.label}
       style={{
         width: NODE_W, minHeight: NODE_H,
-        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1,
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2,
         padding: '6px 9px', borderRadius: 6,
         border: `1px solid ${material ? 'var(--line-strong)' : 'var(--line)'}`,
         borderLeft: `3px solid ${color}`,
@@ -62,15 +73,28 @@ function FlowNode({ data }: NodeProps) {
       }}
     >
       <Handle type="target" position={d.lr ? Position.Left : Position.Top} style={{ opacity: 0 }} />
-      <div
-        style={{
-          fontSize: 12, fontWeight: mto ? 700 : 500, color: 'var(--ink)', lineHeight: 1.2,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}
-      >
-        {d.label}
-      </div>
-      {d.sub && <div className="mono" style={{ fontSize: 9, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.sub}</div>}
+      {material ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <Visual visual={d.visual} name={d.label} size={22} rounded={4} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ ...LABEL_STYLE, fontWeight: 500 }}>{d.label}</div>
+            {d.sub && <div className="mono" style={SUB_STYLE}>{d.sub}</div>}
+          </div>
+        </div>
+      ) : (
+        <>
+          {isInput && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color }}>
+                {KIND_LABEL[d.kind]}
+              </span>
+            </div>
+          )}
+          <div style={{ ...LABEL_STYLE, fontWeight: mto ? 700 : 500 }}>{d.label}</div>
+          {d.sub && <div className="mono" style={SUB_STYLE}>{d.sub}</div>}
+        </>
+      )}
       <Handle type="source" position={d.lr ? Position.Right : Position.Bottom} style={{ opacity: 0 }} />
     </div>
   );
