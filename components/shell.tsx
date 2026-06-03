@@ -6,7 +6,7 @@ import { getRepo, getRepoSource } from '@/lib/repo';
 // take-offs from the repo and composes the presentational TopBar / Sidebar.
 
 function takeoffHref(kind?: string): string {
-  return kind === 'height' ? '/takeoff/ladder' : kind === 'count' ? '/takeoff/anchors' : kind === 'length' ? '/takeoff/guardrail' : '#';
+  return kind === 'height' ? '/takeoff/ladder' : kind === 'count' ? '/takeoff/anchors' : kind === 'length' ? '/takeoff/guardrail' : kind === 'area' || kind === 'volume' ? '/takeoff/area' : '#';
 }
 const DOT: Record<string, string> = { height: 'var(--prim-height)', count: 'var(--prim-count)', length: 'var(--prim-length)' };
 
