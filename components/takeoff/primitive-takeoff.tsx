@@ -277,11 +277,11 @@ export function PrimitiveTakeoff({
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_380px] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex flex-col gap-3">
           {rows.length > 0 && (
             <Section index="01" title="System variant">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {rows.map((r, i) => {
                   const on = i === variantIdx;
                   return (
@@ -309,7 +309,7 @@ export function PrimitiveTakeoff({
           )}
 
           <Section index="02" title="Criteria">
-            <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2.5 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(criteriaValues).map(([k, v]) => (
                 <TypedField
                   key={k}
@@ -325,7 +325,7 @@ export function PrimitiveTakeoff({
 
           {allModifiers.length > 0 && (
             <Section index="03" title="Modifiers">
-              <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-2.5 md:grid-cols-2 lg:grid-cols-3">
                 {allModifiers.map((m) => modifierField(m))}
               </div>
             </Section>
@@ -384,12 +384,12 @@ export function PrimitiveTakeoff({
                   <button onClick={() => setOverrideMode((m) => !m)} className="text-[10px]" style={{ color: overrideMode ? 'var(--accent)' : 'var(--ink-3)' }}>⊷ override</button>
                 </div>
               </div>
-              <div className="flex items-stretch gap-1.5">
+              <div className="flex items-stretch gap-1.5 overflow-x-auto">
                 {result.chain.steps.map((s, i) => {
                   const c = CHAIN_COLOR[s.role];
                   const overridden = !!s.override_history;
                   return (
-                    <div key={i} className="flex items-stretch gap-1.5" style={{ flex: 1 }}>
+                    <div key={i} className="flex items-stretch gap-1.5 min-w-[120px] lg:min-w-0 lg:flex-1">
                       <div className="min-w-0 flex-1 rounded border p-2" style={{ background: c.bg, borderColor: overridden ? 'var(--annotation)' : 'var(--line)' }}>
                         <div className="flex items-center justify-between">
                           <span className="uc" style={{ fontSize: 9, color: c.fg, fontWeight: 600 }}>{s.role}</span>
@@ -469,7 +469,7 @@ export function PrimitiveTakeoff({
                         </span>
                       </div>
                       {editable.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-2.5 p-3 md:grid-cols-2">
                           {editable.map((inp) => propField(p.name, inp))}
                         </div>
                       ) : (
@@ -525,7 +525,7 @@ export function PrimitiveTakeoff({
                           {attachedSys && (
                             <div className="mb-2.5">
                               <div className="uc mb-1.5">open inputs</div>
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                                 <label className="flex flex-col gap-1">
                                   <span className="mono text-[10px] text-ink-3">run length · mm</span>
                                   <input
@@ -596,7 +596,7 @@ export function PrimitiveTakeoff({
         </div>
 
         <div className="min-w-0">
-          <div className="sticky top-[60px] overflow-hidden rounded-md border border-line bg-panel" style={{ boxShadow: 'var(--shadow-sticky)' }}>
+          <div className="overflow-hidden rounded-md border border-line bg-panel lg:sticky lg:top-[60px]" style={{ boxShadow: 'var(--shadow-sticky)' }}>
             <div className="flex items-start justify-between border-b border-line px-4 py-3.5">
               <div>
                 <h2 className="m-0 text-[14px] font-semibold">Live MTO</h2>
