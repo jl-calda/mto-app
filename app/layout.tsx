@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@xyflow/react/dist/style.css';
 
 export const metadata: Metadata = {
   title: 'Take-off · Plant access ladder · MTO',

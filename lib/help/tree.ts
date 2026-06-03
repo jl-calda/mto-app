@@ -17,6 +17,7 @@ import type {
   SystemVariantRef,
 } from '@/lib/types';
 import { CONCEPT_BY_ID, type ConceptId } from './content';
+import { buildSystemGraph, type GraphModel } from './graph';
 
 /** A coloured chip. `kind` colours it by concept; `tone` is for role chips. */
 export type TagTone = 'gate' | 'qty' | 'sku' | 'always' | 'muted';
@@ -63,6 +64,8 @@ export interface TreeModel {
   groups: TreeGroup[];
   /** Per-material gating breakdown (system trees only; the generic tree omits it). */
   materials?: MaterialNode[];
+  /** Node-link DAG for the React Flow renderer (system trees only). */
+  graph?: GraphModel;
 }
 
 // ── formatting helpers (pure) ───────────────────────────────────────────────
@@ -284,6 +287,7 @@ export function buildSystemTree(system: System, materials: Material[] = []): Tre
       { id: 'outputs', label: 'Outputs', subgroups: [models, mto] },
     ],
     materials: materialNodes,
+    graph: buildSystemGraph(system, materials),
   };
 }
 
