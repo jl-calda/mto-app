@@ -159,6 +159,11 @@ html, body {
 * { box-sizing: border-box; }
 button { font-family: inherit; }
 
+/* Clip horizontal overflow at the viewport so the off-canvas drawers (translated
+   off-screen when closed) never create a horizontal scrollbar. `clip` (not
+   `hidden`) keeps vertical page scroll normal and doesn't break position:sticky. */
+html { overflow-x: clip; }
+
 /* numerical superpowers */
 .mono, .num {
   font-family: var(--font-mono);
@@ -231,6 +236,16 @@ select.input {
   background-repeat: no-repeat;
   background-position: right 8px center;
   padding-right: 22px;
+}
+
+/* Touch ergonomics — only on coarse pointers (phones/tablets), so mouse density
+   on desktop is untouched. Wizard inputs that set an inline height override this
+   via the style attribute, so they're unaffected. */
+@media (pointer: coarse) {
+  .btn { height: 36px; padding: 0 14px; }
+  .btn.sm { height: 32px; padding: 0 12px; }
+  .input, input[type=text], input[type=number], select.input { height: 36px; font-size: var(--fs-13); }
+  [role="switch"] { min-height: 24px; }
 }
 
 /* --- panels / cards --- */
