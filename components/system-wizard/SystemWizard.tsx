@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { System } from '@/lib/types';
 import { deriveRuleContext, type XRef } from '@/lib/engine';
 import { saveSystemAction } from '@/app/systems/actions';
+import { useHelp } from '@/components/help/help-context';
+import { buildSystemTree } from '@/lib/help/tree';
 import { Step1Primitive } from './Step1Primitive';
 import { Step2Modifiers } from './Step2Modifiers';
 import { Step3Variants } from './Step3Variants';
@@ -48,6 +50,13 @@ export function SystemWizard({ initial, isNew }: { initial: System; isNew?: bool
   const [error, setError] = useState<string>();
 
   const ctx = useMemo(() => deriveRuleContext(system), [system]);
+
+  // Publish the live draft into the Guide so its dependency tree updates as you edit.
+  const { setSubject } = useHelp();
+  useEffect(() => {
+    setSubject(buildSystemTree(system));
+    return () => setSubject(null);
+  }, [system, setSubject]);
 
   async function save() {
     setStatus('saving');

@@ -7,12 +7,21 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { ConceptId } from '@/lib/help/content';
+import type { TreeModel } from '@/lib/help/tree';
 
 const KEY = 'mto.help.open';
+
+type HelpView = 'tree' | 'glossary';
 
 type HelpCtx = {
   open: boolean;
   topic: ConceptId | null;
+  /** The current screen's dependency graph (published by the page), or null → generic. */
+  subject: TreeModel | null;
+  setSubject: (m: TreeModel | null) => void;
+  /** Which panel tab is showing — tree by default; an (i)/openTopic jumps to glossary. */
+  view: HelpView;
+  setView: (v: HelpView) => void;
   openTopic: (t: ConceptId) => void;
   toggle: () => void;
   close: () => void;
@@ -28,6 +37,9 @@ export function HelpProvider({ children, defaultTopic = null }: { children: Reac
   // (i) button can still override via openTopic. Re-seeds per navigation (Shell
   // remounts), so an open guide refocuses as you switch tabs.
   const [topic, setTopic] = useState<ConceptId | null>(defaultTopic);
+  // Published by the current page (remounts to null per navigation → no stale data).
+  const [subject, setSubject] = useState<TreeModel | null>(null);
+  const [view, setView] = useState<HelpView>('tree');
 
   useEffect(() => {
     try {
@@ -45,15 +57,17 @@ export function HelpProvider({ children, defaultTopic = null }: { children: Reac
     }
   };
 
+  // An (i) / node click means "explain this concept" → jump to the glossary tab.
   const openTopic = useCallback((t: ConceptId) => {
     setTopic(t);
+    setView('glossary');
     setOpen(true);
     persist(true);
   }, []);
   const toggle = useCallback(() => setOpen((o) => { persist(!o); return !o; }), []);
   const close = useCallback(() => { setOpen(false); persist(false); }, []);
 
-  return <Ctx.Provider value={{ open, topic, openTopic, toggle, close }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ open, topic, subject, setSubject, view, setView, openTopic, toggle, close }}>{children}</Ctx.Provider>;
 }
 
 export function useHelp(): HelpCtx {
