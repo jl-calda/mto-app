@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode, SVGProps } from 'react';
 import { Fragment } from 'react';
+import { useMobileNav } from './chrome/mobile-nav-context';
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -24,6 +25,9 @@ export const Icon = {
   ),
   Plus: (p: IconProps) => (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" {...p}><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+  ),
+  Menu: (p: IconProps) => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" {...p}><path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></svg>
   ),
   Chev: (p: IconProps) => (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" {...p}><path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -98,19 +102,39 @@ export function Logo({ size = 22 }: { size?: number }) {
 
 export type Crumb = { label: string; href?: string };
 
+// Hamburger — opens the off-canvas mobile nav drawer. Mobile-only (lg:hidden);
+// the desktop rail is always visible so no toggle is needed there.
+export function NavToggleButton() {
+  const { toggle } = useMobileNav();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="btn ghost sm lg:hidden"
+      aria-label="Open navigation"
+      style={{ padding: '0 6px' }}
+    >
+      <Icon.Menu />
+    </button>
+  );
+}
+
 // ----- TOP BAR -----
 export function TopBar({
   crumbs = [],
   right = null,
   env = 'dev',
+  showNavToggle = false,
 }: {
   crumbs?: Crumb[];
   right?: ReactNode;
   env?: string;
+  showNavToggle?: boolean;
 }) {
   return (
     <header style={tbStyles.bar}>
       <div style={tbStyles.left}>
+        {showNavToggle && <NavToggleButton />}
         <Link href="/" style={tbStyles.brand}>
           <Logo size={20} />
           <span style={tbStyles.brandName}>MTO</span>
@@ -173,8 +197,12 @@ const tbStyles: Record<string, CSSProperties> = {
 type NavItem = { id: string; label: string; href: string; icon: ReactNode; tag?: string };
 export type RecentItem = { label: string; href: string; color: string; tag?: string };
 
-// ----- SIDEBAR (global nav) -----
-export function Sidebar({ active = 'projects', counts, recent, source = 'memory' }: { active?: string; counts?: Record<string, number>; recent?: RecentItem[]; source?: 'supabase' | 'memory' }) {
+type SidebarProps = { active?: string; counts?: Record<string, number>; recent?: RecentItem[]; source?: 'supabase' | 'memory' };
+
+// The nav body (items + recent + footer), shared verbatim by the desktop rail
+// (<Sidebar>) and the mobile off-canvas drawer (<MobileSidebarDrawer>). Renders
+// as a fragment so each shell supplies its own scrollable flex-column container.
+export function SidebarContent({ active = 'projects', counts, recent, source = 'memory' }: SidebarProps) {
   const items: NavItem[] = [
     { id: 'projects', label: 'Projects', href: '/', icon: <Icon.Folder /> },
     { id: 'systems', label: 'Systems', href: '/systems', icon: <Icon.Layers /> },
@@ -184,7 +212,7 @@ export function Sidebar({ active = 'projects', counts, recent, source = 'memory'
     { id: 'inventory', label: 'Inventory', href: '/inventory', icon: <Icon.Bin />, tag: 'v3' },
   ];
   return (
-    <aside style={sbStyles.bar}>
+    <>
       <div style={sbStyles.section}>
         <div className="uc" style={{ padding: '8px 12px 4px' }}>Workspace</div>
         {items.map((it) => (
@@ -218,6 +246,16 @@ export function Sidebar({ active = 'projects', counts, recent, source = 'memory'
           mto · {source === 'supabase' ? 'supabase · live' : 'in-memory seed'}
         </div>
       </div>
+    </>
+  );
+}
+
+// ----- SIDEBAR (global nav, desktop rail) -----
+// Hidden below lg, where <MobileSidebarDrawer> takes over.
+export function Sidebar(props: SidebarProps) {
+  return (
+    <aside className="hidden lg:flex" style={sbStyles.bar}>
+      <SidebarContent {...props} />
     </aside>
   );
 }
@@ -225,7 +263,7 @@ export function Sidebar({ active = 'projects', counts, recent, source = 'memory'
 const sbStyles: Record<string, CSSProperties> = {
   bar: {
     width: 220, background: 'var(--panel-2)', borderRight: '1px solid var(--line)',
-    display: 'flex', flexDirection: 'column', flexShrink: 0,
+    flexDirection: 'column', flexShrink: 0,
     position: 'sticky', top: 'var(--h-topbar)', height: 'calc(100vh - var(--h-topbar))',
   },
   section: { paddingBottom: 4 },
@@ -268,7 +306,7 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <div style={phStyles.bar}>
+    <div className="flex flex-col gap-3 border-b border-line px-5 py-4 lg:flex-row lg:items-end lg:justify-between lg:px-6">
       <div style={phStyles.left}>
         <h1 style={phStyles.title}>{title}</h1>
         {subtitle && <div style={phStyles.subtitle}>{subtitle}</div>}

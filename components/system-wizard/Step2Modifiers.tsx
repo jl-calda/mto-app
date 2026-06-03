@@ -52,14 +52,14 @@ function ModifierRow({ m, onChange, onRemove }: { m: Modifier; onChange: (p: Par
   const kind = m.type.kind as Kind;
   return (
     <div className="rounded border border-line p-2.5">
-      <div className="grid grid-cols-[minmax(0,1.4fr)_1fr_1fr_auto] items-end gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.4fr)_1fr_1fr_auto] sm:items-end">
         <Field label="name"><TextInput mono value={m.name} onChange={(v) => onChange({ name: v })} /></Field>
         <Field label="group"><Select value={m.group} options={GROUPS} onChange={(v) => onChange({ group: v })} /></Field>
         <Field label="type"><Select value={kind} options={KINDS} onChange={(v) => onChange({ type: blankType(v), default_value: v === 'bool' ? false : v === 'distance' || v === 'percentage' ? 0 : undefined })} /></Field>
         <button type="button" className="btn sm danger" onClick={onRemove}>Remove</button>
       </div>
 
-      <div className="mt-2 grid grid-cols-[1fr_1fr_auto_auto] items-end gap-2">
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
         {(kind === 'distance' || kind === 'percentage') && (
           <Field label={`default ${kind === 'percentage' ? '%' : 'mm'}`}><NumberInput value={Number(m.default_value) || 0} onChange={(v) => onChange({ default_value: v })} /></Field>
         )}

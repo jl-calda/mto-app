@@ -65,7 +65,7 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
         <div className="flex flex-col gap-2.5">
           {props.map((p, i) => (
             <div key={i} className="rounded border border-line p-2.5">
-              <div className="grid grid-cols-[minmax(0,1.3fr)_1fr_1fr_auto] items-end gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.3fr)_1fr_1fr_auto] sm:items-end">
                 <Field label="name"><TextInput mono value={p.name} onChange={(v) => update(i, { name: v })} /></Field>
                 <Field label="archetype">
                   <Select value={p.archetype} options={ARCHETYPES} onChange={(v) => update(i, { archetype: v, inputs: defaultInputs(v), packing_policy: v === 'stock' ? { mode: 'tight', overlap_per_joint: 0 } : undefined })} />
@@ -78,7 +78,7 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
 
               {/* archetype-specific inputs */}
               {p.inputs.length > 0 && (
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {p.inputs.map((inp, ii) => (
                     <Field key={inp.name} label={`${inp.name} · default`}>
                       <NumberInput value={Number(inp.default) || 0} onChange={(v) => setInputDefault(i, ii, v)} />
@@ -118,14 +118,14 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
             <table className="w-full border-collapse text-[12px]">
               <thead>
                 <tr>
-                  <th className="border-b border-line p-1.5 text-left uc">variant ╲ property</th>
+                  <th className="sticky left-0 z-[1] border-b border-line bg-panel p-1.5 text-left uc">variant ╲ property</th>
                   {props.map((p) => <th key={p.name} className="border-b border-line p-1.5 text-left uc">{p.name}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {names.map((nm) => (
                   <tr key={nm}>
-                    <td className="border-b border-line p-1.5 font-medium">{nm}</td>
+                    <td className="sticky left-0 z-[1] border-b border-line bg-panel p-1.5 font-medium">{nm}</td>
                     {props.map((p) => {
                       const on = isOn(p, nm);
                       return (

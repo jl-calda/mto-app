@@ -3,8 +3,12 @@
 import { useMemo, useState } from 'react';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
+import { Cell } from '@/components/chrome/responsive-cell';
 import { MaterialEditor } from '@/components/materials/material-editor';
 import type { Material } from '@/lib/types';
+
+// Desktop (lg+): 6-track grid. Mobile: each row is a stacked card.
+const COLS = 'lg:grid lg:grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] lg:items-center lg:gap-2.5';
 
 function counts(items: string[]): Map<string, number> {
   const m = new Map<string, number>();
@@ -38,13 +42,13 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
       {/* header */}
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="m-0 text-[22px] font-semibold">Materials</h1>
           <div className="mt-1 text-[12px] text-ink-3">Global SKU catalogue — referenced by model rules and SKU lookups.</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="SKUs" v={materials.length} />
             <Stat k="vendors" v={vendors.size} />
             <Stat k="groups" v={groups.size} />
@@ -53,9 +57,9 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-[200px_minmax(0,1fr)] gap-4 py-4 items-start">
-        {/* sidebar filters */}
-        <aside className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[200px_minmax(0,1fr)]">
+        {/* sidebar filters — a wrapped chip-rail on mobile, a column on desktop */}
+        <aside className="flex flex-row flex-wrap gap-x-6 gap-y-3 lg:flex-col lg:gap-4">
           <FilterGroup label="Group" active={group} onPick={setGroup} entries={groups} total={materials.length} />
           <FilterGroup label="Vendor" active={vendor} onPick={setVendor} entries={vendors} total={materials.length} />
         </aside>
@@ -72,9 +76,9 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
             />
           </div>
 
-          <div className={editing ? 'grid grid-cols-[minmax(0,1fr)_360px] items-start gap-4' : ''}>
+          <div className={editing ? 'grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]' : ''}>
             <div className="min-w-0 overflow-hidden rounded-md border border-line bg-panel">
-              <div className="grid grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line bg-panel-2 px-3.5 py-2">
+              <div className={`${COLS} hidden border-b border-line bg-panel-2 px-3.5 py-2`}>
                 {['', 'sku · name', 'group', 'vendor', 'unit', 'cuttable'].map((h, i) => (
                   <div key={i} className="uc">{h}</div>
                 ))}
@@ -85,25 +89,29 @@ export function MaterialsBrowser({ materials }: { materials: Material[] }) {
                   <button
                     key={m.id}
                     onClick={() => setEditing({ material: m, isNew: false })}
-                    className="grid w-full grid-cols-[24px_minmax(0,1fr)_120px_110px_56px_70px] items-center gap-2.5 border-b border-line px-3.5 py-2 text-left last:border-b-0 hover:bg-panel-hover"
+                    className={`${COLS} w-full border-b border-line px-3.5 py-3 text-left last:border-b-0 hover:bg-panel-hover lg:py-2`}
                     style={{ background: on ? 'var(--selected)' : undefined }}
                   >
-                    <Visual visual={m.visual} name={m.name} size={24} rounded={3} />
-                    <div className="min-w-0">
-                      <div className="truncate text-[12px]">{m.name}</div>
-                      <div className="mono truncate text-[10px] text-ink-3">{m.sku}</div>
+                    <div className="flex items-center gap-3 lg:contents">
+                      <Visual visual={m.visual} name={m.name} size={24} rounded={3} />
+                      <div className="min-w-0 flex-1 lg:flex-none">
+                        <div className="truncate text-[12px]">{m.name}</div>
+                        <div className="mono truncate text-[10px] text-ink-3">{m.sku}</div>
+                      </div>
                     </div>
-                    <div className="truncate text-[12px] text-ink-2">{m.category ?? '—'}</div>
-                    <div className="truncate text-[12px] text-ink-2">{m.vendor}</div>
-                    <div className="mono text-[11px] text-ink-3">{m.unit}</div>
-                    <div>
-                      {m.is_cuttable ? (
-                        <span className="tag" style={{ color: 'var(--ok)', background: 'var(--ok-soft)' }}>
-                          {m.stock_options?.length ? m.stock_options.join('/') : 'yes'}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-ink-4">—</span>
-                      )}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 lg:contents lg:mt-0">
+                      <Cell label="group" className="truncate text-[12px] text-ink-2">{m.category ?? '—'}</Cell>
+                      <Cell label="vendor" className="truncate text-[12px] text-ink-2">{m.vendor}</Cell>
+                      <Cell label="unit" className="mono text-[11px] text-ink-3">{m.unit}</Cell>
+                      <Cell label="cuttable">
+                        {m.is_cuttable ? (
+                          <span className="tag" style={{ color: 'var(--ok)', background: 'var(--ok-soft)' }}>
+                            {m.stock_options?.length ? m.stock_options.join('/') : 'yes'}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-ink-4">—</span>
+                        )}
+                      </Cell>
                     </div>
                   </button>
                 );

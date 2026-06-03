@@ -91,7 +91,7 @@ export function SubAssembliesBrowser({
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold">Sub-assemblies</h1>
@@ -99,13 +99,13 @@ export function SubAssembliesBrowser({
           </div>
           <div className="mt-1 text-[12px] text-ink-3">Parametric, reusable material bundles — inlined into models through the shared evaluator.</div>
         </div>
-        <div className="flex border-l border-line">
+        <div className="flex flex-wrap border-line lg:border-l">
           <Stat k="active" v={active} />
           <Stat k="total" v={subs.length} />
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,360px)_minmax(0,1fr)] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         {/* list */}
         <section className="overflow-hidden rounded-md border border-line bg-panel">
           <div className="flex flex-col gap-2 border-b border-line bg-panel-2 p-2.5">
@@ -305,9 +305,9 @@ function EditorView({ sub, materials, matById, tab, setTab }: { sub: SubAssembly
 type ParamEdit = { onChange: (idx: number, patch: Partial<ParameterDef>) => void; onRemove: (idx: number) => void };
 function ParameterTable({ params, edit }: { params: ParameterDef[]; edit?: ParamEdit }) {
   if (params.length === 0 && !edit) return <div className="py-2 text-[12px] text-ink-3">No parameters.</div>;
-  const cols = edit ? 'grid grid-cols-[minmax(0,1fr)_110px_80px_90px_36px]' : 'grid grid-cols-[minmax(0,1fr)_110px_70px_80px]';
+  const cols = edit ? 'grid min-w-[360px] grid-cols-[minmax(0,1fr)_110px_80px_90px_36px]' : 'grid min-w-[340px] grid-cols-[minmax(0,1fr)_110px_70px_80px]';
   return (
-    <div className="overflow-hidden rounded border border-line">
+    <div className="overflow-x-auto rounded border border-line">
       <div className={`${cols} border-b border-line bg-panel-2 px-3 py-1.5`}>
         {['name', 'type', 'required', 'default', ...(edit ? [''] : [])].map((h, i) => <div key={i} className="uc">{h}</div>)}
       </div>
@@ -356,7 +356,7 @@ function MaterialCard({ sam, material, edit }: { sam: SubAssemblyMaterial; mater
       {edit ? (
         <RuleEditor rule={sam.rule} paramNames={edit.paramNames} onChange={edit.onChangeRule} sku={material?.sku} />
       ) : (
-        <div className="grid grid-cols-3 gap-2 p-2.5">
+        <div className="grid grid-cols-1 gap-2 p-2.5 sm:grid-cols-3">
           <Knob n="01" label="Applies when">
             {always ? <span className="mono text-[11px] text-ink-3">always</span> : (
               <div className="flex flex-wrap gap-1">
@@ -394,7 +394,7 @@ function RuleEditor({ rule, paramNames, onChange, sku }: { rule: Rule; paramName
     else patch({ qty_kind: 'per_length', qty: rule.qty ?? 1 });
   };
   return (
-    <div className="grid grid-cols-3 gap-2 p-2.5">
+    <div className="grid grid-cols-1 gap-2 p-2.5 sm:grid-cols-3">
       <Knob n="01" label="Applies when">
         <div className="flex flex-col gap-1.5">
           <Field label="variants" hint="names matched at inline-resolution time">

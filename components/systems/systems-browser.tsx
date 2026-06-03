@@ -4,12 +4,14 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
+import { Cell } from '@/components/chrome/responsive-cell';
 import { DeleteButton } from '@/components/delete-button';
 import { HelpButton } from '@/components/help/help-button';
 import { deleteSystemAction } from '@/app/systems/actions';
 import type { PrimitiveKind, System } from '@/lib/types';
 
-const COLS = 'grid grid-cols-[28px_minmax(0,1fr)_110px_56px_56px_56px_40px] items-center gap-2.5';
+// Desktop (lg+): the 7-track grid. Mobile: the row is a block "card" (see below).
+const COLS = 'lg:grid lg:grid-cols-[28px_minmax(0,1fr)_110px_56px_56px_56px_40px] lg:items-center lg:gap-2.5';
 const BADGEABLE: PrimitiveKind[] = ['length', 'height', 'count'];
 
 export function SystemsBrowser({ systems }: { systems: System[] }) {
@@ -33,7 +35,7 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold">Systems</h1>
@@ -42,7 +44,7 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
           <div className="mt-1 text-[12px] text-ink-3">Reusable definitions of what to measure and which design choices to offer.</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex border-l border-line">
+          <div className="flex flex-wrap border-line lg:border-l">
             <Stat k="systems" v={systems.length} />
             <Stat k="models" v={models} />
           </div>
@@ -74,13 +76,13 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search systems…"
-            className="input w-[240px]"
+            className="input w-full sm:w-[240px]"
             style={{ fontFamily: 'var(--font-sans)' }}
           />
         </div>
 
         <div className="overflow-hidden rounded-md border border-line bg-panel">
-          <div className={`${COLS} border-b border-line bg-panel-2 px-3.5 py-2`}>
+          <div className={`${COLS} hidden border-b border-line bg-panel-2 px-3.5 py-2`}>
             {['', 'system', 'primitive', 'var', 'prop', 'mod', ''].map((h, i) => (
               <div key={i} className="uc">{h}</div>
             ))}
@@ -90,29 +92,37 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
             return (
               <div
                 key={s.id}
-                className={`${COLS} border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover`}
+                className={`${COLS} relative border-b border-line px-3.5 last:border-b-0 hover:bg-panel-hover lg:py-2.5`}
               >
-                <Link href={`/systems/${s.id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
+                <Link
+                  href={`/systems/${s.id}`}
+                  className="flex items-center gap-3 pt-3 pb-2 pr-9 lg:contents lg:p-0"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
                   <Visual visual={s.visual} name={s.name} size={26} rounded={4} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1 lg:flex-none">
                     <div className="truncate text-[13px] font-medium">{s.name}</div>
                     <div className="mono truncate text-[10px] text-ink-3">{s.models.length} model{s.models.length === 1 ? '' : 's'}</div>
                   </div>
-                  <div>
+                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 lg:contents lg:pb-0">
+                  <Cell label="primitive">
                     {BADGEABLE.includes(k) ? (
                       <PrimitiveBadge kind={k as 'length' | 'height' | 'count'} mini />
                     ) : (
                       <span className="tag">{k}</span>
                     )}
-                  </div>
-                  <div className="mono text-[12px]">{s.variants.rows.length}</div>
-                  <div className="mono text-[12px]">{s.properties.length}</div>
-                  <div className="mono text-[12px]">{s.modifiers.length}</div>
-                </Link>
-                <DeleteButton
-                  confirmMessage={`Delete system "${s.name}" and its ${s.models.length} model(s)? This cannot be undone.`}
-                  onDelete={() => deleteSystemAction(s.id)}
-                />
+                  </Cell>
+                  <Cell label="var" className="mono text-[12px]">{s.variants.rows.length}</Cell>
+                  <Cell label="prop" className="mono text-[12px]">{s.properties.length}</Cell>
+                  <Cell label="mod" className="mono text-[12px]">{s.modifiers.length}</Cell>
+                </div>
+                <div className="absolute right-2.5 top-2.5 lg:static">
+                  <DeleteButton
+                    confirmMessage={`Delete system "${s.name}" and its ${s.models.length} model(s)? This cannot be undone.`}
+                    onDelete={() => deleteSystemAction(s.id)}
+                  />
+                </div>
               </div>
             );
           })}

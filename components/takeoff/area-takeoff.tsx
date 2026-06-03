@@ -35,7 +35,7 @@ export function AreaTakeoff({ title }: { title: string }) {
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="m-0 text-[22px] font-semibold">{title}</h1>
           <div className="mt-2 flex items-center gap-1.5">
@@ -43,14 +43,14 @@ export function AreaTakeoff({ title }: { title: string }) {
             <span className="tag">pack_stock_2d · shelf nesting</span>
           </div>
         </div>
-        <div className="flex border-l border-line">
+        <div className="flex flex-wrap border-line lg:border-l">
           <Stat k="sheets" v={result.sheets} />
           <Stat k="used m²" v={(result.usedArea / 1e6).toFixed(2)} />
           <Stat k="wastage" v={`${wastagePct}%`} highlight={wastagePct > 30 ? 'warn' : undefined} />
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex flex-col gap-3">
           <Section index="01" title="Sheet stock">
             <div className="flex items-center gap-2">

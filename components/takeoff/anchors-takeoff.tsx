@@ -59,7 +59,7 @@ export function AnchorsTakeoff({
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-      <div className="flex items-end justify-between border-b border-line pb-3.5">
+      <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="m-0 text-[22px] font-semibold">{title}</h1>
           <div className="mt-2 flex items-center gap-1.5">
@@ -68,20 +68,20 @@ export function AnchorsTakeoff({
             <span className="tag">mod · {model.name}</span>
           </div>
         </div>
-        <div className="flex border-l border-line">
+        <div className="flex flex-wrap border-line lg:border-l">
           <Stat k="lines" v={result.mto.length} />
           <Stat k="items" v={items} />
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_380px] items-start gap-4 py-4">
+      <div className="grid grid-cols-1 items-start gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex flex-col gap-3">
           <section className="overflow-hidden rounded-md border border-line bg-panel">
             <header className="flex items-center gap-2.5 border-b border-line bg-panel-2 px-3.5 py-2.5">
               <span className="mono text-[11px] text-ink-4">01</span>
               <h3 className="m-0 text-[13px] font-semibold">Criteria</h3>
             </header>
-            <div className="grid grid-cols-3 gap-x-4 gap-y-2.5 p-3.5">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2.5 p-3.5 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(criteria).map(([k, v]) => (
                 <div key={k}>
                   <div className="uc">{k}</div>
@@ -110,7 +110,7 @@ export function AnchorsTakeoff({
 
         <div className="min-w-0">
           <div
-            className="sticky top-[60px] overflow-hidden rounded-md border border-line bg-panel"
+            className="overflow-hidden rounded-md border border-line bg-panel lg:sticky lg:top-[60px]"
             style={{ boxShadow: 'var(--shadow-sticky)' }}
           >
             <div className="flex items-start justify-between border-b border-line px-4 py-3.5">

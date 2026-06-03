@@ -29,7 +29,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
     <Shell navActive="systems" crumbs={[{ label: 'Systems', href: '/systems' }, { label: system.name }]}>
       <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
         <HelpSubjectSystem system={system} materials={materials} />
-        <div className="flex items-end justify-between border-b border-line pb-3.5">
+        <div className="flex flex-col gap-3 border-b border-line pb-3.5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-3">
             <Visual visual={system.visual} name={system.name} size={40} rounded={6} />
             <div>
@@ -50,7 +50,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex border-l border-line">
+            <div className="flex flex-wrap border-line lg:border-l">
               <Stat k="variants" v={system.variants.rows.length} />
               <Stat k="modifiers" v={system.modifiers.length} />
               <Stat k="criteria" v={system.criteria.length} />
@@ -61,7 +61,7 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
           <Preview title="Variants" topic="variant">
             {system.variants.rows.map((r, i) => (
               <span key={i} className="tag">{r.kind === 'local' ? r.name : r.variant_id}</span>

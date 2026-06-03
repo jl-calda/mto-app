@@ -52,7 +52,7 @@ export function MaterialEditor({ material, isNew, onClose }: { material: Materia
         <Field label="visual"><VisualEditor value={m.visual} name={m.name || m.sku} onChange={(v) => set({ visual: v })} /></Field>
         <Field label="name"><TextInput value={m.name} onChange={(v) => set({ name: v })} placeholder="Material name" /></Field>
         <Field label="sku"><TextInput mono value={m.sku} onChange={(v) => set({ sku: v })} placeholder="VEC-…" /></Field>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="vendor"><TextInput value={m.vendor} onChange={(v) => set({ vendor: v })} /></Field>
           <Field label="category"><TextInput value={m.category ?? ''} onChange={(v) => set({ category: v })} /></Field>
         </div>
@@ -64,7 +64,7 @@ export function MaterialEditor({ material, isNew, onClose }: { material: Materia
           {m.is_cuttable && (
             <div className="mt-2.5 flex flex-col gap-2">
               <Field label="stock options · mm (comma)" hint="lengths the engine packs/cuts from"><TextInput mono value={stockStr} onChange={setStockStr} placeholder="3000, 6000" /></Field>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Field label="cut allowance · mm"><NumberInput value={m.cut_allowance ?? 0} onChange={(v) => set({ cut_allowance: v })} /></Field>
                 <Field label="min offcut · mm"><NumberInput value={m.min_offcut_to_retain ?? 0} onChange={(v) => set({ min_offcut_to_retain: v })} /></Field>
               </div>
