@@ -362,5 +362,8 @@ select.input {
 /* take-off ladder · derived-value pulse (from takeoff-ladder.html <style>) */
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
+/* Guide wide-overlay (Tree tab) slide-in */
+@keyframes help-slide-in { from { transform: translateX(12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
 /* anchor reset so internal links don't inherit purple/blue underline */
 a { color: inherit; }

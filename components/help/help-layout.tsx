@@ -1,35 +1,57 @@
 'use client';
 
-// Renders the scrollable <main> plus the Guide. On desktop (lg+) the Guide is a
-// collapsible flex-sibling <aside> that takes 400px and pushes main (the natural
-// flex consequence). Below lg that would crush a phone, so the Guide instead
-// renders as a fixed right-side overlay drawer with a dimmed backdrop, leaving
-// main full-width. Both share one <HelpPanel> (mounted only when open); only one
-// is ever display-visible at a time.
+// Renders the scrollable <main> plus the Guide. Three presentations, but <HelpPanel>
+// (which hosts the React Flow canvas) mounts in exactly ONE of them at a time:
+//   • desktop push panel — a 400px sticky flex sibling that pushes main (Glossary,
+//     or the Tree tab without a system in focus);
+//   • desktop wide overlay — when the Tree tab is open for a system, the Guide
+//     grows to min(960px,92vw) as a fixed elevated overlay floating over main
+//     ("overflow into the main content") with no reflow jank;
+//   • mobile drawer — a fixed right overlay + backdrop below lg.
+// `isDesktop` (matchMedia) picks the single host. Safe vs hydration: the panel is
+// gated on `open`, which is false on the server + first client render, so the
+// panel never renders during SSR/hydration regardless of `isDesktop`.
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useHelp } from './help-context';
 import { HelpPanel } from './help-panel';
 import { useBodyScrollLock } from '@/components/chrome/use-body-scroll-lock';
 
+function useIsDesktop(): boolean {
+  const [d, setD] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const on = () => setD(mq.matches);
+    mq.addEventListener('change', on);
+    setD(mq.matches);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return d;
+}
+
 export function HelpLayout({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
-  const { open, close } = useHelp();
+  const { open, close, view, subject } = useHelp();
+  const isDesktop = useIsDesktop();
   useBodyScrollLock(open); // mobile-only (no-op ≥lg, so the desktop push panel keeps main scrollable)
+
+  // Desktop Tree tab with a system in focus → widen into an overlay over main.
+  const wide = open && isDesktop && view === 'tree' && !!subject;
+
   return (
     <>
       <main style={{ flex: 1, minWidth: 0, maxWidth: '100vw', overflow: scroll ? 'auto' : 'hidden', background: 'var(--bg)' }}>
         {children}
       </main>
 
-      {/* desktop: push panel */}
+      {/* desktop: push panel (collapses to 0 when the wide overlay takes over) */}
       <aside
         aria-hidden={!open}
         className="hidden lg:block"
         style={{
-          width: open ? 400 : 0,
+          width: open && !wide ? 400 : 0,
           flexShrink: 0,
           overflow: 'hidden',
-          borderLeft: open ? '1px solid var(--line)' : 'none',
+          borderLeft: open && !wide ? '1px solid var(--line)' : 'none',
           background: 'var(--panel-2)',
           position: 'sticky',
           top: 'var(--h-topbar)',
@@ -37,8 +59,24 @@ export function HelpLayout({ children, scroll = true }: { children: ReactNode; s
           transition: 'width 160ms ease',
         }}
       >
-        {open && <HelpPanel />}
+        {isDesktop && open && !wide && <HelpPanel />}
       </aside>
+
+      {/* desktop: wide Tree overlay — fixed, floats over main (no push/reflow) */}
+      {isDesktop && wide && (
+        <aside
+          className="hidden lg:block"
+          style={{
+            position: 'fixed', top: 'var(--h-topbar)', right: 0, bottom: 0, zIndex: 65,
+            width: 'min(960px, 92vw)',
+            background: 'var(--panel-2)', borderLeft: '1px solid var(--line)',
+            boxShadow: 'var(--shadow-pop)',
+            animation: 'help-slide-in 160ms ease',
+          }}
+        >
+          <HelpPanel />
+        </aside>
+      )}
 
       {/* mobile: fixed overlay drawer + backdrop */}
       <div className="lg:hidden" aria-hidden={!open}>
@@ -60,7 +98,7 @@ export function HelpLayout({ children, scroll = true }: { children: ReactNode; s
             boxShadow: open ? 'var(--shadow-pop)' : 'none',
           }}
         >
-          {open && <HelpPanel />}
+          {!isDesktop && open && <HelpPanel />}
         </aside>
       </div>
     </>
