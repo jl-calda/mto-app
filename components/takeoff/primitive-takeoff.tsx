@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { resolveTakeoff } from '@/lib/engine';
+import { deriveModifierValues, deriveCriteriaOptions } from '@/lib/takeoff-init';
 import { mtoToCsv } from '@/lib/export/csv';
 import { mtoToPdf } from '@/lib/export/pdf';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
 import { CuttingDiagram } from '@/components/takeoff/CuttingDiagram';
-import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, PresetTarget, PropertyInput, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
+import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, Modifier, PresetTarget, PropertyInput, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -50,6 +51,7 @@ export function PrimitiveTakeoff({
   inventory = [],
   persist,
   initialProps,
+  initialModifiers,
 }: {
   system: System;
   model: Model;
@@ -65,10 +67,36 @@ export function PrimitiveTakeoff({
   inventory?: InventoryItem[];
   persist?: PersistTarget;
   initialProps?: Record<string, unknown>;
+  initialModifiers?: Record<string, unknown>;
 }) {
   const rows = system.variants.rows;
   const [variantIdx, setVariantIdx] = useState(initialVariant);
   const [value, setValue] = useState(initial);
+
+  // editable Section-02 criteria, seeded from the resolved defaults the page passed.
+  const [criteriaValues, setCriteriaValues] = useState<Record<string, string>>(() => ({ ...criteria }));
+  const setCriterion = (k: string, v: string) => setCriteriaValues((o) => ({ ...o, [k]: v }));
+  // known allowed values per criterion (from the rules that gate on it) → select; else free text.
+  const criteriaOptions = useMemo(() => deriveCriteriaOptions(system, model, subAssemblies), [system, model, subAssemblies]);
+
+  // editable system modifiers, seeded system-default → model-default → saved take-off values
+  // (the same order the engine resolves them). Typed per the modifier's ModifierType.
+  const [modValues, setModValues] = useState<Record<string, number | boolean | string>>(() => {
+    const resolved = deriveModifierValues(system, model, initialModifiers);
+    const o: Record<string, number | boolean | string> = {};
+    for (const m of system.modifiers) {
+      if (m.type.kind === 'support_grid' || m.type.kind === 'discrete_set') continue; // skip for now
+      const v = resolved[m.name];
+      switch (m.type.kind) {
+        case 'bool': o[m.name] = v === true; break;
+        case 'enum': o[m.name] = typeof v === 'string' ? v : (m.type.values[0] ?? ''); break;
+        case 'enum_with_attributes': o[m.name] = typeof v === 'string' ? v : (m.type.values[0]?.name ?? ''); break;
+        default: o[m.name] = typeof v === 'number' ? v : 0; // distance | number | percentage | banded_distance
+      }
+    }
+    return o;
+  });
+  const setModifier = (name: string, v: number | boolean | string) => setModValues((o) => ({ ...o, [name]: v }));
 
   // editable property inputs (rung spacing, cage threshold, gates, toeboard, landing width, …),
   // seeded from each input's default (overridden by any saved values), fed into property_values.
@@ -142,15 +170,15 @@ export function PrimitiveTakeoff({
         resolveAttachedSystem,
         inventory,
         input: {
-          criteria_values: criteria,
-          modifier_values: {},
+          criteria_values: criteriaValues,
+          modifier_values: modValues,
           primitive_input: primitiveInput,
           property_values: propValues,
           attachments: attachmentInstances,
           chain_overrides: Object.keys(chainOverrides).length ? chainOverrides : undefined,
         },
       }),
-    [system, model, materials, variant, criteria, primitiveInput, resolveSubAssembly, resolveAttachedSystem, attachmentInstances, chainOverrides, inventory],
+    [system, model, materials, variant, criteriaValues, modValues, primitiveInput, propValues, resolveSubAssembly, resolveAttachedSystem, attachmentInstances, chainOverrides, inventory],
   );
   const items = result.mto.reduce((s, l) => s + l.qty, 0);
   const flights = result.counters.flights;
@@ -171,8 +199,8 @@ export function PrimitiveTakeoff({
     system_id: system.id,
     model_id: model.id,
     variant_choice: variant,
-    criteria_values: criteria,
-    modifier_values: {},
+    criteria_values: criteriaValues,
+    modifier_values: modValues,
     primitive_input: primitiveInput,
     property_values: propValues,
     attachments: attachmentInstances,
@@ -180,7 +208,7 @@ export function PrimitiveTakeoff({
     mto: result.mto,
     warnings: result.warnings,
   });
-  const sig = JSON.stringify({ variantIdx, primitiveInput, propValues, attState, mto: result.mto.length, items });
+  const sig = JSON.stringify({ variantIdx, criteriaValues, modValues, primitiveInput, propValues, attState, mto: result.mto.length, items });
   const save = useTakeoffPersistence(persist, buildTakeoff, sig);
 
   function download(blob: Blob, ext: string) {
@@ -224,6 +252,41 @@ export function PrimitiveTakeoff({
       </div>
     );
   };
+
+  // editable system modifiers, typed by the modifier's ModifierType.
+  const renderModifierControl = (m: Modifier) => {
+    const cur = modValues[m.name];
+    if (m.type.kind === 'bool') {
+      const on = cur === true;
+      return (
+        <button type="button" role="switch" aria-checked={on} aria-label={m.name} onClick={() => setModifier(m.name, !on)} className="flex items-center gap-1.5">
+          <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}>
+            <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
+          </span>
+          <span className="text-[11px] text-ink-2">{on ? 'on' : 'off'}</span>
+        </button>
+      );
+    }
+    if (m.type.kind === 'enum' || m.type.kind === 'enum_with_attributes') {
+      const opts = m.type.kind === 'enum' ? m.type.values : m.type.values.map((v) => v.name);
+      return (
+        <select className="input" aria-label={m.name} value={String(cur ?? '')} onChange={(e) => setModifier(m.name, e.target.value)}>
+          {opts.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+      );
+    }
+    const unit = m.type.kind === 'percentage' ? '%' : 'mm';
+    return (
+      <div className="flex items-center gap-1.5">
+        <input className="input w-full" inputMode="numeric" aria-label={m.name} value={typeof cur === 'number' ? cur : 0}
+          onChange={(e) => setModifier(m.name, Math.max(0, Number(e.target.value) || 0))} />
+        <span className="mono text-[11px] text-ink-3">{unit}</span>
+      </div>
+    );
+  };
+  // modifiers we render an editable control for (support_grid / discrete_set are skipped for now).
+  const editableModifiers = system.modifiers.filter((m) => m.enabled && m.type.kind !== 'support_grid' && m.type.kind !== 'discrete_set');
+  const skippedModifiers = system.modifiers.filter((m) => m.enabled && (m.type.kind === 'support_grid' || m.type.kind === 'discrete_set'));
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -277,16 +340,45 @@ export function PrimitiveTakeoff({
 
           <Section index="02" title="Criteria">
             <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
-              {Object.entries(criteria).map(([k, v]) => (
-                <div key={k}>
-                  <div className="uc">{k}</div>
-                  <div className="mono text-[12px]">{v}</div>
-                </div>
-              ))}
+              {Object.entries(criteriaValues).map(([k, v]) => {
+                const opts = criteriaOptions[k] ?? [];
+                return (
+                  <label key={k} className="flex flex-col gap-1">
+                    <span className="uc">{k}</span>
+                    {opts.length > 0 ? (
+                      <select className="input" aria-label={k} value={v} onChange={(e) => setCriterion(k, e.target.value)}>
+                        {/* keep the seeded value selectable even when no rule enumerates it */}
+                        {(opts.includes(v) ? opts : [v, ...opts]).map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    ) : (
+                      <input className="input" aria-label={k} value={v} onChange={(e) => setCriterion(k, e.target.value)} />
+                    )}
+                  </label>
+                );
+              })}
             </div>
           </Section>
 
-          <Section index="03" title={`Primitive · ${primitive}${segmented ? ' · segmented' : ''}`}>
+          {editableModifiers.length > 0 && (
+            <Section index="03" title="Modifiers">
+              <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
+                {editableModifiers.map((m) => (
+                  <label key={m.name} className="flex flex-col gap-1">
+                    <span className="uc">{m.name}</span>
+                    <span className="mono text-[9px] text-ink-4">{m.group} · {m.type.kind}</span>
+                    {renderModifierControl(m)}
+                  </label>
+                ))}
+              </div>
+              {skippedModifiers.length > 0 && (
+                <div className="mt-2.5 text-[11px] text-ink-3">
+                  Not yet editable here: {skippedModifiers.map((m) => `${m.name} (${m.type.kind})`).join(', ')} — applied via defaults.
+                </div>
+              )}
+            </Section>
+          )}
+
+          <Section index="04" title={`Primitive · ${primitive}${segmented ? ' · segmented' : ''}`}>
             {canSegment && (
               <div className="mb-2.5 flex items-center gap-2">
                 <button type="button" role="switch" aria-checked={segmented} aria-label="Segmented run" onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
@@ -409,7 +501,7 @@ export function PrimitiveTakeoff({
           </Section>
 
           {system.properties.length > 0 && (
-            <Section index="04" title="Properties">
+            <Section index="05" title="Properties">
               <div className="flex flex-col gap-2">
                 {system.properties.map((p) => {
                   const editable = p.inputs.filter((i) => i.type.kind !== 'variant');
@@ -443,7 +535,7 @@ export function PrimitiveTakeoff({
           )}
 
           {(system.attachments ?? []).length > 0 && (
-            <Section index="05" title="Attachments">
+            <Section index="06" title="Attachments">
               <div className="flex flex-col gap-2.5">
                 {(system.attachments ?? []).map((att) => {
                   const inst = attState[att.id];

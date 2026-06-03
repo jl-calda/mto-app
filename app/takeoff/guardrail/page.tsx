@@ -33,6 +33,8 @@ export default async function GuardrailTakeoffPage() {
         initial={derivePrimitiveTotal(takeoff) ?? 24000}
         initialVariant={deriveVariantIndex(system, takeoff)}
         iconName="post"
+        initialProps={takeoff?.property_values}
+        initialModifiers={takeoff?.modifier_values}
         persist={{ takeoffId: 'tko-guardrail', projectId: 'prj-westfield' }}
       />
     </Shell>

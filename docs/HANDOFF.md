@@ -17,8 +17,10 @@ DB: the live Supabase project (`kzprzimqdhqnttkvdxpb`) is seeded (10 tables). Pr
 
 ---
 
-## ⚠️ Critical gap — modifiers/criteria are not editable in the take-off UI
-`components/takeoff/primitive-takeoff.tsx` edits **properties** but **not modifiers**, and criteria are read-only (Section 02). So `landing_side`, `wall_offset`, `substrate`, `upright_angle`, `base_type`, `support_grid`, and **`wind_zone`** apply via **defaults only**. The wind-zone scaling, rest-platform handedness, and bracket-SKU-by-band therefore **can't be exercised from the UI** even though the engine/data support them. **Build this first.**
+## ✅ Resolved — modifiers/criteria are now editable in the take-off UI
+`components/takeoff/primitive-takeoff.tsx` now renders an editable **Modifiers** section (03) — one control per enabled system modifier, typed by `ModifierType` (enum/enum_with_attributes → select, bool → switch, distance/number/percentage/banded_distance → number; `support_grid`/`discrete_set` listed but skipped for now). **Criteria** (Section 02) are editable too: a select where the gating rules enumerate allowed values (e.g. EVO `wind_zone` → 1/2/3), free text otherwise. Both feed `resolveTakeoff`'s `modifier_values`/`criteria_values` (were hardcoded `{}`/read-only) and persist via `buildTakeoff` + the save signature. Seeding mirrors the engine's resolution order (system default → `model.modifier_defaults` → saved `takeoff.modifier_values`) through new pure helpers `deriveModifierValues` / `deriveCriteriaOptions` in `lib/takeoff-init.ts` (unit-tested). `app/takeoff/[id]/page.tsx` (and the static ladder/guardrail routes) thread saved `modifier_values` like `initialProps`. Verified: EVO `wind_zone` 2 → **38** counterweights, Vectaladder `landing_side` right → **REST-PLATFORM-R** are reachable from the UI-seeded values (tests in `lib/takeoff-init.test.ts`).
+
+Remaining UI gaps: `support_grid`/`discrete_set` modifier editing; no React render test (helpers are pure-tested only); `applies_to_variants`/variant-kind property inputs still unrendered (see below).
 
 ## Bounded / incomplete logic (by area)
 
