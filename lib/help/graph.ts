@@ -47,6 +47,8 @@ export interface GraphEdge {
 export interface GraphModel {
   title?: string;
   subtitle?: string;
+  /** Single-model systems surface the model's name as the header (no model node). */
+  modelName?: string;
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
@@ -101,11 +103,14 @@ export function buildSystemGraph(system: System, materials: Material[] = []): Gr
     addNode({ id: `prop:${p.name}`, kind: 'property', concept: 'property', label: p.name, sub: p.archetype });
   }
 
-  // ── output backbone: materials → model → MTO, with per-material dep edges ──
-  addNode({ id: 'mto', kind: 'mto', concept: 'mto', label: 'MTO' });
+  // ── outputs: each material's dependency edges. There's no separate MTO node.
+  //    A single model is surfaced as the graph header (materials are the terminal
+  //    outputs); multiple models stay as terminal grouping nodes so their
+  //    materials remain distinguishable.
+  const singleModel = system.models.length === 1;
   for (const model of system.models) {
     const modelId = `model:${model.name}`;
-    addNode({ id: modelId, kind: 'model', concept: 'model', label: model.name, sub: model.status });
+    if (!singleModel) addNode({ id: modelId, kind: 'model', concept: 'model', label: model.name, sub: model.status });
     for (const mm of model.materials) {
       const M = `mat:${mm.id}`;
       const cat = byId.get(mm.material_id);
@@ -132,13 +137,17 @@ export function buildSystemGraph(system: System, materials: Material[] = []): Gr
         r.qty_kind === 'per_length' || r.qty_kind === 'cut' || r.qty_kind === 'algorithm' ||
         (r.qty_kind === 'per' && (r.per?.kind === 'primitive_input' || r.per?.kind === 'unit_of_length' || r.per?.kind === 'algorithm_output'));
       if (measureDriven) addEdge('meas', M, 'measure');
-      // structural
-      addEdge(M, modelId, 'feeds');
+      // structural — group materials under their model only when several coexist
+      if (!singleModel) addEdge(M, modelId, 'feeds');
     }
-    addEdge(modelId, 'mto', 'feeds');
   }
 
-  return { title: system.name, subtitle: `${system.primitive.kind} system`, nodes, edges };
+  return {
+    title: system.name,
+    subtitle: singleModel ? `${system.primitive.kind} system` : `${system.primitive.kind} system · ${system.models.length} models`,
+    modelName: singleModel ? system.models[0]?.name : undefined,
+    nodes, edges,
+  };
 }
 
 /** The concept-level fallback DAG (no concrete system) — System → Model → Take-off

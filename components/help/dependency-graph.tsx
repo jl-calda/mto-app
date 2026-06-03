@@ -261,10 +261,18 @@ export function DependencyGraph({ model }: { model: TreeModel }) {
   const graph = model.graph ?? GENERIC_GRAPH;
   return (
     <div className="flex flex-col gap-2">
-      {(graph.title || graph.subtitle) && (
-        <div>
+      {(graph.title || graph.subtitle || graph.modelName) && (
+        <div className="flex flex-col gap-0.5">
           {graph.title && <div className="text-[13px] font-semibold">{graph.title}</div>}
-          {graph.subtitle && <div className="mono text-[10px] text-ink-3">{graph.subtitle}</div>}
+          {graph.modelName ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-ink-2">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CONCEPT_BY_ID.model.color }} />
+              <span className="font-medium">{graph.modelName}</span>
+              <span className="uc text-ink-4">model</span>
+            </div>
+          ) : graph.subtitle ? (
+            <div className="mono text-[10px] text-ink-3">{graph.subtitle}</div>
+          ) : null}
         </div>
       )}
       <div
