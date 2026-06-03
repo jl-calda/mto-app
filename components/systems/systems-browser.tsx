@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
+import { DeleteButton } from '@/components/delete-button';
+import { deleteSystemAction } from '@/app/systems/actions';
 import type { PrimitiveKind, System } from '@/lib/types';
 
-const COLS = 'grid grid-cols-[28px_minmax(0,1fr)_110px_56px_56px_56px] items-center gap-2.5';
+const COLS = 'grid grid-cols-[28px_minmax(0,1fr)_110px_56px_56px_56px_40px] items-center gap-2.5';
 const BADGEABLE: PrimitiveKind[] = ['length', 'height', 'count'];
 
 export function SystemsBrowser({ systems }: { systems: System[] }) {
@@ -75,35 +77,39 @@ export function SystemsBrowser({ systems }: { systems: System[] }) {
 
         <div className="overflow-hidden rounded-md border border-line bg-panel">
           <div className={`${COLS} border-b border-line bg-panel-2 px-3.5 py-2`}>
-            {['', 'system', 'primitive', 'var', 'prop', 'mod'].map((h, i) => (
+            {['', 'system', 'primitive', 'var', 'prop', 'mod', ''].map((h, i) => (
               <div key={i} className="uc">{h}</div>
             ))}
           </div>
           {rows.map((s) => {
             const k = s.primitive.kind;
             return (
-              <Link
+              <div
                 key={s.id}
-                href={`/systems/${s.id}`}
                 className={`${COLS} border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover`}
-                style={{ textDecoration: 'none', color: 'inherit' }}
               >
-                <Visual visual={s.visual} name={s.name} size={26} rounded={4} />
-                <div className="min-w-0">
-                  <div className="truncate text-[13px] font-medium">{s.name}</div>
-                  <div className="mono truncate text-[10px] text-ink-3">{s.models.length} model{s.models.length === 1 ? '' : 's'}</div>
-                </div>
-                <div>
-                  {BADGEABLE.includes(k) ? (
-                    <PrimitiveBadge kind={k as 'length' | 'height' | 'count'} mini />
-                  ) : (
-                    <span className="tag">{k}</span>
-                  )}
-                </div>
-                <div className="mono text-[12px]">{s.variants.rows.length}</div>
-                <div className="mono text-[12px]">{s.properties.length}</div>
-                <div className="mono text-[12px]">{s.modifiers.length}</div>
-              </Link>
+                <Link href={`/systems/${s.id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
+                  <Visual visual={s.visual} name={s.name} size={26} rounded={4} />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium">{s.name}</div>
+                    <div className="mono truncate text-[10px] text-ink-3">{s.models.length} model{s.models.length === 1 ? '' : 's'}</div>
+                  </div>
+                  <div>
+                    {BADGEABLE.includes(k) ? (
+                      <PrimitiveBadge kind={k as 'length' | 'height' | 'count'} mini />
+                    ) : (
+                      <span className="tag">{k}</span>
+                    )}
+                  </div>
+                  <div className="mono text-[12px]">{s.variants.rows.length}</div>
+                  <div className="mono text-[12px]">{s.properties.length}</div>
+                  <div className="mono text-[12px]">{s.modifiers.length}</div>
+                </Link>
+                <DeleteButton
+                  confirmMessage={`Delete system "${s.name}" and its ${s.models.length} model(s)? This cannot be undone.`}
+                  onDelete={() => deleteSystemAction(s.id)}
+                />
+              </div>
             );
           })}
           {rows.length === 0 && (

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Shell } from '@/components/shell';
 import { PrimitiveBadge, Stat } from '@/components/chrome';
 import { Visual } from '@/components/visual';
+import { DeleteTakeoffButton } from '@/components/projects/delete-takeoff-button';
 import { getRepo } from '@/lib/repo';
 import type { Takeoff, Variant } from '@/lib/types';
 
@@ -75,28 +76,29 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               const mdl = modelById.get(t.model_id);
               const pk = sys?.primitive.kind;
               return (
-                <Link
+                <div
                   key={t.id}
-                  href={`/takeoff/${t.id}`}
                   className="flex items-center gap-3 border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
                 >
-                  {pk && pk !== 'area' && pk !== 'volume' && <PrimitiveBadge kind={pk} mini />}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-medium">{t.name}</div>
-                    <div className="mono truncate text-[10px] text-ink-3">
-                      {sys?.name} › {mdl?.name}
+                  <Link href={`/takeoff/${t.id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
+                    {pk && pk !== 'area' && pk !== 'volume' && <PrimitiveBadge kind={pk} mini />}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-medium">{t.name}</div>
+                      <div className="mono truncate text-[10px] text-ink-3">
+                        {sys?.name} › {mdl?.name}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    {badgesFor(t, variantById).map((b, i) => (
-                      <span key={i} className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: TONE[b.tone].color, background: TONE[b.tone].bg }}>{b.label}</span>
-                    ))}
-                  </div>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: 'var(--ink-4)' }}>
-                    <path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </Link>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {badgesFor(t, variantById).map((b, i) => (
+                        <span key={i} className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: TONE[b.tone].color, background: TONE[b.tone].bg }}>{b.label}</span>
+                      ))}
+                    </div>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ color: 'var(--ink-4)' }}>
+                      <path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Link>
+                  <DeleteTakeoffButton projectId={project.id} takeoffId={t.id} name={t.name} />
+                </div>
               );
             })}
             {project.takeoffs.length === 0 && (

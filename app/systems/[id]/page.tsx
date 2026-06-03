@@ -17,12 +17,8 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
   if (!system) notFound();
   const k = system.primitive.kind;
 
-  // attached-system display names for the attachments editor
-  const attachedNames: Record<string, string> = {};
-  if (system.attachments?.length) {
-    const all = await repo.listSystems();
-    for (const s of all) attachedNames[s.id] = s.name;
-  }
+  // other systems available to attach (excluding this one), for the editor's picker
+  const otherSystems = (await repo.listSystems()).filter((s) => s.id !== system.id).map((s) => ({ id: s.id, name: s.name }));
 
   return (
     <Shell navActive="systems" crumbs={[{ label: 'Systems', href: '/systems' }, { label: system.name }]}>
@@ -107,11 +103,9 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
           )}
         </section>
 
-        {system.attachments && system.attachments.length > 0 && (
-          <div className="mt-4">
-            <AttachmentsEditor attachments={system.attachments} attachedNames={attachedNames} />
-          </div>
-        )}
+        <div className="mt-4">
+          <AttachmentsEditor systemId={system.id} attachments={system.attachments ?? []} systems={otherSystems} />
+        </div>
         <div className="h-6" />
       </div>
     </Shell>

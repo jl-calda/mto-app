@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Visual } from '@/components/visual';
 import { Stat } from '@/components/chrome';
+import { DeleteButton } from '@/components/delete-button';
+import { deleteProjectAction } from '@/app/projects/actions';
 import type { Project } from '@/lib/types';
 
-const COLS = 'grid grid-cols-[28px_minmax(0,1fr)_160px_140px_80px] items-center gap-2.5';
+const COLS = 'grid grid-cols-[28px_minmax(0,1fr)_160px_140px_80px_40px] items-center gap-2.5';
 
 export function ProjectsBrowser({ projects }: { projects: Project[] }) {
   const [q, setQ] = useState('');
@@ -47,26 +49,30 @@ export function ProjectsBrowser({ projects }: { projects: Project[] }) {
 
         <div className="overflow-hidden rounded-md border border-line bg-panel">
           <div className={`${COLS} border-b border-line bg-panel-2 px-3.5 py-2`}>
-            {['', 'project', 'client', 'location', 'take-offs'].map((h, i) => (
+            {['', 'project', 'client', 'location', 'take-offs', ''].map((h, i) => (
               <div key={i} className="uc">{h}</div>
             ))}
           </div>
           {rows.map((p) => (
-            <Link
+            <div
               key={p.id}
-              href={`/projects/${p.id}`}
               className={`${COLS} border-b border-line px-3.5 py-2.5 last:border-b-0 hover:bg-panel-hover`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
             >
-              <Visual visual={p.visual} name={p.name} size={26} rounded={4} />
-              <div className="min-w-0">
-                <div className="truncate text-[13px] font-medium">{p.name}</div>
-                <div className="mono truncate text-[10px] text-ink-3">{p.id}</div>
-              </div>
-              <div className="truncate text-[12px] text-ink-2">{p.client}</div>
-              <div className="truncate text-[12px] text-ink-2">{p.location ?? '—'}</div>
-              <div className="mono text-[13px]">{p.takeoffs.length}</div>
-            </Link>
+              <Link href={`/projects/${p.id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
+                <Visual visual={p.visual} name={p.name} size={26} rounded={4} />
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-medium">{p.name}</div>
+                  <div className="mono truncate text-[10px] text-ink-3">{p.id}</div>
+                </div>
+                <div className="truncate text-[12px] text-ink-2">{p.client}</div>
+                <div className="truncate text-[12px] text-ink-2">{p.location ?? '—'}</div>
+                <div className="mono text-[13px]">{p.takeoffs.length}</div>
+              </Link>
+              <DeleteButton
+                confirmMessage={`Delete project "${p.name}" and its ${p.takeoffs.length} take-off(s)? This cannot be undone.`}
+                onDelete={() => deleteProjectAction(p.id)}
+              />
+            </div>
           ))}
           {rows.length === 0 && (
             <div className="px-3.5 py-10 text-center text-[12px] text-ink-3">No projects match.</div>

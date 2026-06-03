@@ -43,6 +43,12 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
       if (error) throw new Error(`project#${project.id}: ${error.message}`);
       return project;
     },
+    async deleteProject(id) {
+      // take-offs FK to the project; drop them first to avoid orphan rows
+      await db.from('takeoff').delete().eq('project_id', id);
+      const { error } = await db.from('project').delete().eq('id', id);
+      if (error) throw new Error(`project#${id}: ${error.message}`);
+    },
     listSystems: () => listPayloads<System>('system'),
     getSystem: (id) => getPayload<System>('system', id),
     async saveSystem(system) {
@@ -55,6 +61,12 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
       });
       if (error) throw new Error(`system#${system.id}: ${error.message}`);
       return system;
+    },
+    async deleteSystem(id) {
+      // nested models live in their own table too — cascade within the aggregate
+      await db.from('model').delete().eq('system_id', id);
+      const { error } = await db.from('system').delete().eq('id', id);
+      if (error) throw new Error(`system#${id}: ${error.message}`);
     },
     listModels: (systemId) => listPayloadsWhere<Model>('model', 'system_id', systemId),
     getModel: (id) => getPayload<Model>('model', id),
@@ -73,6 +85,19 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
         await db.from('system').upsert({ id: sys.id, name: sys.name, description: sys.description ?? null, primitive_kind: sys.primitive.kind, payload: { ...sys, models: next } });
       }
       return model;
+    },
+    async deleteModel(id) {
+      const model = await getPayload<Model>('model', id);
+      const { error } = await db.from('model').delete().eq('id', id);
+      if (error) throw new Error(`model#${id}: ${error.message}`);
+      // keep the parent system payload's models[] in step (getSystem reads the payload)
+      if (model) {
+        const sys = await getPayload<System>('system', model.system_id);
+        if (sys) {
+          const next = (sys.models ?? []).filter((m) => m.id !== id);
+          await db.from('system').upsert({ id: sys.id, name: sys.name, description: sys.description ?? null, primitive_kind: sys.primitive.kind, payload: { ...sys, models: next } });
+        }
+      }
     },
     listMaterials: () => listPayloads<Material>('material'),
     getMaterial: (id) => getPayload<Material>('material', id),
@@ -133,7 +158,27 @@ export function createSupabaseRepo(db: SupabaseClient): Repository {
         payload: takeoff,
       });
       if (error) throw new Error(`takeoff#${takeoff.id}: ${error.message}`);
+      // keep the parent project payload's takeoffs[] in step (getProject reads the payload)
+      await syncProjectTakeoffs(projectId, (ts) => {
+        const i = ts.findIndex((t) => t.id === takeoff.id);
+        return i >= 0 ? ts.map((t) => (t.id === takeoff.id ? takeoff : t)) : [...ts, takeoff];
+      });
       return takeoff;
     },
+    async deleteTakeoff(projectId, id) {
+      const { error } = await db.from('takeoff').delete().eq('id', id);
+      if (error) throw new Error(`takeoff#${id}: ${error.message}`);
+      await syncProjectTakeoffs(projectId, (ts) => ts.filter((t) => t.id !== id));
+    },
   };
+
+  async function syncProjectTakeoffs(projectId: string, update: (ts: Takeoff[]) => Takeoff[]) {
+    const project = await getPayload<Project>('project', projectId);
+    if (!project) return;
+    const next = update(project.takeoffs ?? []);
+    await db.from('project').upsert({
+      id: project.id, name: project.name, client: project.client, location: project.location ?? null,
+      payload: { ...project, takeoffs: next },
+    });
+  }
 }
