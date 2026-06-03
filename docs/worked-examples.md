@@ -64,13 +64,16 @@ the guide's hand-rounded figures — these are correct, not bugs:
   scale 2 / 3 / 4 per upright by `wind_zone` (1 / 2 / 3) via `applies_when.criteria`
   on the counterweight rule (no `criteria_driven_defaults` needed). Zone 1 → 26;
   zone 2 → 38.
-- **Rest-platform L/R** uses one SKU; handedness-by-junction needs a `junction_attr`
-  SKU key. Follow-up.
+- ~~Rest-platform L/R uses one SKU~~ **Done** — a `landing_side` modifier (left/right)
+  drives the rest-platform SKU via the existing `modifier` SKU-lookup
+  (`REST-PLATFORM-L` / `-R`). Per-junction *alternating* handedness (switchback ladders)
+  would still want a `junction_attr` key + per-junction emission — a deeper follow-up.
 
-## Not yet built (browsable systems, but no bespoke take-off screen)
+## Take-off screens
 
-The three systems list + their models are editable, and the golden tests drive the
-engine directly. Dedicated take-off **screens** for them (with the `users` /
-`landing_width` / toeboard property inputs) are a follow-up — the shared
-`PrimitiveTakeoff` covers length/height but doesn't yet expose arbitrary property
-inputs.
+The three systems list + their models are editable, the golden tests drive the
+engine directly, and the shared `PrimitiveTakeoff` (length/height) now exposes the
+properties' take-off inputs (`users`, `landing_width`, cage threshold/hoop spacing,
+toeboard on/off, gates, rung spacing, …), typed by `InputType`. Modifiers
+(`wall_offset`, `substrate`, `landing_side`, `upright_angle`, …) still apply via
+their defaults — surfacing them as editable take-off controls is the next step.

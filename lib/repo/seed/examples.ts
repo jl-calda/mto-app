@@ -145,6 +145,7 @@ export const exampleSystems: System[] = [
       { name: 'substrate', group: 'mounting', type: { kind: 'enum', values: ['concrete', 'metal_deck', 'steel'] }, enabled: true, default_value: 'concrete' },
       { name: 'support_grid', group: 'mounting', type: { kind: 'support_grid' }, enabled: true, default_value: null },
       { name: 'flight_max_height', group: 'compliance', type: { kind: 'distance' }, enabled: true, default_value: 8000 },
+      { name: 'landing_side', group: 'geometric', type: { kind: 'enum', values: ['left', 'right'] }, enabled: true, default_value: 'left' },
     ],
     variants: {
       attribute_columns: [{ name: 'has_cage', type: { kind: 'bool' } }],
@@ -187,6 +188,9 @@ export const exampleSystems: System[] = [
           { table_name: 'exit_landing', columns: ['width'], rows: [
             { keys: ['600'], sku: '02415' }, { keys: ['800'], sku: '02662' }, { keys: ['1000'], sku: '02663' },
           ], fallback: { sku: 'EXIT-LANDING' } },
+          { table_name: 'rest_platform', columns: ['side'], rows: [
+            { keys: ['left'], sku: 'REST-PLATFORM-L' }, { keys: ['right'], sku: 'REST-PLATFORM-R' },
+          ], fallback: { sku: 'REST-PLATFORM' } },
         ],
         materials: [
           { id: 'vm-rung', material_id: 'mat-vl-rung', rule: { qty_kind: 'per', per: { kind: 'property', name: 'rungs' }, applies_when: aw } },
@@ -197,7 +201,7 @@ export const exampleSystems: System[] = [
           { id: 'vm-band', material_id: 'mat-vl-cage-band', rule: { qty_kind: 'per', qty: 5, per: { kind: 'derived', name: 'flights' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
           { id: 'vm-exit', material_id: 'mat-vl-exit', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'free_head_count' }, sku_lookup: { table: 'exit_landing', keys: [{ kind: 'property_input', property: 'landing_width', input: 'width' }] }, applies_when: { variants: ['Cage ladder'], criteria: {} } } },
           { id: 'vm-gate', material_id: 'mat-vl-gate', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'free_head_count' }, applies_when: { variants: ['Cage ladder', 'Side-exit cage'], criteria: {} } } },
-          { id: 'vm-rest', material_id: 'mat-vl-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, applies_when: aw } },
+          { id: 'vm-rest', material_id: 'mat-vl-restplatform', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'rest_platforms' }, sku_lookup: { table: 'rest_platform', keys: [{ kind: 'modifier', name: 'landing_side' }] }, applies_when: aw } },
           { id: 'vm-deckfix', material_id: 'mat-vl-deckfix', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'place_supports', inputs: {} }, applies_when: { variants: [], criteria: {}, modifiers: { substrate: ['metal_deck'] } } } },
           { id: 'vm-plate', material_id: 'mat-vl-plate', rule: { qty_kind: 'fixed', qty: 1, applies_when: aw } },
         ],
