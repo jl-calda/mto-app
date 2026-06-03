@@ -3,6 +3,14 @@
 **Branch:** `claude/awesome-carson-jmyxN` — open in **PR #6** → `claude/trusting-meitner-VEsKg` (production branch). **Not merged yet** → production still serves a *build-time snapshot* until #6 lands.
 **Health:** `npm run typecheck` + `npm run build` (all 22 routes `ƒ` dynamic) + `npm test` → **58 tests** green.
 
+## Button/logic audit (branch `claude/takeoff-modifiers-criteria-fPnTV`)
+A full audit of every interactive control found the app ~96% wired; the dead/broken set was small and is now resolved (**75 tests** green):
+- **Area/volume take-off links** — `shell.tsx takeoffHref()` no longer returns `#`; points at `/takeoff/area`. Removed the now-unused `ResourcePlaceholder`.
+- **Delete actions** — Projects / Systems / Models / Take-offs are now deletable (repo methods in both memory + supabase, server actions, confirm-guarded `DeleteButton`). Referential-integrity guards (`lib/repo/guards.ts`) block deleting a system/model still used by a take-off; nested models cascade with their system. Also fixed a latent supabase bug: `saveTakeoff`/`deleteTakeoff` now keep `project.payload.takeoffs` in sync.
+- **Sub-assembly authoring** — the editor is now a controlled draft: `+ Add material`/`+ Add parameter` work, the three rule knobs are editable (applies-when gating, quantity incl. `cut_length_param` + per-target over the sub-assembly's params), with draft Save + Publish. Pure helpers in `lib/subassembly-authoring.ts`.
+- **Attachment authoring** — `AttachmentsEditor` on the system detail page is fully editable (`+ Add attachment` + connection/constraints/presets/derived/suppressions/model-policy), persisted via `saveSystemAttachmentsAction`. Pure builders in `lib/attachment-authoring.ts`.
+- Still UI-only / out of scope: sub-assembly SKU-lookup *table* authoring (direct SKUs shown), and a real a11y/render-test pass.
+
 ## Shipped this session
 | Area | Commit | Note |
 |---|---|---|
