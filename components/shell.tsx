@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { TopBar, Sidebar, type Crumb, type RecentItem } from './chrome';
 import { HelpProvider } from './help/help-context';
 import { HelpLayout } from './help/help-layout';
+import { GuideButton } from './help/guide-button';
 import { getRepo, getRepoSource } from '@/lib/repo';
+import { topicForNav } from '@/lib/help/content';
 
 // The data-aware app frame: a server component that reads real nav counts + recent
 // take-offs from the repo and composes the presentational TopBar / Sidebar.
@@ -47,14 +49,14 @@ export async function Shell({
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar crumbs={crumbs} right={topRight} env={process.env.VERCEL_ENV ?? 'dev'} />
-      <HelpProvider>
+    <HelpProvider defaultTopic={topicForNav(navActive)}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <TopBar crumbs={crumbs} right={<><GuideButton />{topRight}</>} env={process.env.VERCEL_ENV ?? 'dev'} />
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
           {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
           <HelpLayout scroll={scroll}>{children}</HelpLayout>
         </div>
-      </HelpProvider>
-    </div>
+      </div>
+    </HelpProvider>
   );
 }

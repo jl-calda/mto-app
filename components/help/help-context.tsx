@@ -20,11 +20,14 @@ type HelpCtx = {
 
 const Ctx = createContext<HelpCtx | null>(null);
 
-export function HelpProvider({ children }: { children: ReactNode }) {
+export function HelpProvider({ children, defaultTopic = null }: { children: ReactNode; defaultTopic?: ConceptId | null }) {
   // Deterministic first render (server + first client render agree) → no hydration
   // mismatch; the persisted value is applied after mount.
   const [open, setOpen] = useState(false);
-  const [topic, setTopic] = useState<ConceptId | null>(null);
+  // Seeded from the active tab so the guide focuses on the relevant concept; an
+  // (i) button can still override via openTopic. Re-seeds per navigation (Shell
+  // remounts), so an open guide refocuses as you switch tabs.
+  const [topic, setTopic] = useState<ConceptId | null>(defaultTopic);
 
   useEffect(() => {
     try {

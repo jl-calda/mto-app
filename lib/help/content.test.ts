@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { COMPARE_ROWS, CONCEPTS, CONCEPT_BY_ID, MAP_EDGES, MAP_NODES, type ConceptId } from '@/lib/help/content';
+import { COMPARE_ROWS, CONCEPTS, CONCEPT_BY_ID, MAP_EDGES, MAP_NODES, topicForNav, type ConceptId } from '@/lib/help/content';
 
 const ALL_IDS: ConceptId[] = ['system', 'variant', 'modifier', 'criterion', 'property', 'model', 'subassembly', 'takeoff', 'mto'];
 
@@ -21,6 +21,21 @@ describe('help content', () => {
       for (const col of ['variant', 'modifier', 'criterion', 'property'] as const) {
         expect(r[col]?.length, `${r.aspect}.${col}`).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('topicForNav focuses the active tab on its concept (or overview)', () => {
+    expect(topicForNav('projects')).toBe('takeoff');
+    expect(topicForNav('systems')).toBe('system');
+    expect(topicForNav('variants')).toBe('variant');
+    expect(topicForNav('subassemblies')).toBe('subassembly');
+    expect(topicForNav('materials')).toBeNull();
+    expect(topicForNav('inventory')).toBeNull();
+    expect(topicForNav(undefined)).toBeNull();
+    // every mapped result is a real concept
+    for (const nav of ['projects', 'systems', 'variants', 'subassemblies']) {
+      const t = topicForNav(nav);
+      expect(t && CONCEPT_BY_ID[t]).toBeTruthy();
     }
   });
 
