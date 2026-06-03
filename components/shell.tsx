@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { TopBar, Sidebar, type Crumb, type RecentItem } from './chrome';
+import { HelpProvider } from './help/help-context';
+import { HelpLayout } from './help/help-layout';
 import { getRepo, getRepoSource } from '@/lib/repo';
 
 // The data-aware app frame: a server component that reads real nav counts + recent
@@ -47,12 +49,12 @@ export async function Shell({
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar crumbs={crumbs} right={topRight} env={process.env.VERCEL_ENV ?? 'dev'} />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
-        <main style={{ flex: 1, minWidth: 0, overflow: scroll ? 'auto' : 'hidden', background: 'var(--bg)' }}>
-          {children}
-        </main>
-      </div>
+      <HelpProvider>
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
+          <HelpLayout scroll={scroll}>{children}</HelpLayout>
+        </div>
+      </HelpProvider>
     </div>
   );
 }
