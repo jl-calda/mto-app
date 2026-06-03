@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { standardRegistry } from '@/lib/engine';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
+import { NumberControl } from '@/components/inputs';
 
 type Panel = { w: number; h: number; qty: number };
 type Placement = { sheet: number; x: number; y: number; w: number; h: number; id?: string };
@@ -116,7 +117,9 @@ function Num({ label, v, on, w = 84 }: { label: string; v: number; on: (v: numbe
   return (
     <label className="flex flex-col gap-0.5">
       <span className="mono text-[9px] text-ink-3">{label}</span>
-      <input className="input" style={{ width: w }} value={v} onChange={(e) => on(Math.max(0, Number(e.target.value) || 0))} />
+      <div style={{ width: w }}>
+        <NumberControl unit="mm" min={0} value={v} onChange={(n) => on(n)} ariaLabel={label} />
+      </div>
     </label>
   );
 }

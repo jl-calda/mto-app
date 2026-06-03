@@ -9,7 +9,8 @@ import { Visual } from '@/components/visual';
 import { Stat, PrimitiveBadge } from '@/components/chrome';
 import { SaveStatus, useTakeoffPersistence, type PersistTarget } from '@/components/takeoff/persistence';
 import { CuttingDiagram } from '@/components/takeoff/CuttingDiagram';
-import type { AttachmentInstance, ChainRole, InventoryItem, Material, Model, Modifier, PresetTarget, PropertyInput, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
+import { TypedField, resolveInputType, resolveModifierType, resolveCriterion } from '@/components/inputs';
+import type { AttachmentInstance, AttrValue, ChainRole, InventoryItem, Material, Model, Modifier, PresetTarget, PropertyInput, SubAssembly, System, SystemVariantRef, Takeoff, VariantSnapshot } from '@/lib/types';
 
 const CHAIN_COLOR: Record<ChainRole, { bg: string; fg: string }> = {
   input: { bg: '#F5F2EA', fg: 'var(--ink-3)' },
@@ -222,71 +223,40 @@ export function PrimitiveTakeoff({
   const downloadCsv = () => download(new Blob([mtoToCsv(result.mto)], { type: 'text/csv;charset=utf-8' }), 'csv');
   const downloadPdf = () => download(new Blob([mtoToPdf(result.mto, title) as BlobPart], { type: 'application/pdf' }), 'pdf');
 
-  const renderPropControl = (prop: string, inp: PropertyInput) => {
-    const cur = propValues[prop]?.[inp.name];
-    if (inp.type.kind === 'bool') {
-      const on = cur === true;
-      return (
-        <button type="button" role="switch" aria-checked={on} aria-label={`${prop} ${inp.name}`} onClick={() => setPropInput(prop, inp.name, !on)} className="flex items-center gap-1.5">
-          <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}>
-            <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
-          </span>
-          <span className="text-[11px] text-ink-2">{on ? 'on' : 'off'}</span>
-        </button>
-      );
-    }
-    if (inp.type.kind === 'enum') {
-      const values = inp.type.values;
-      return (
-        <select className="input" aria-label={`${prop} ${inp.name}`} value={String(cur ?? '')} onChange={(e) => setPropInput(prop, inp.name, e.target.value)}>
-          {values.map((v) => <option key={v} value={v}>{v}</option>)}
-        </select>
-      );
-    }
-    const unit = inp.type.kind === 'distance' ? 'mm' : '';
-    return (
-      <div className="flex items-center gap-1.5">
-        <input className="input w-full" inputMode="numeric" aria-label={`${prop} ${inp.name}`} value={typeof cur === 'number' ? cur : 0}
-          onChange={(e) => setPropInput(prop, inp.name, Math.max(0, Number(e.target.value) || 0))} />
-        {unit && <span className="mono text-[11px] text-ink-3">{unit}</span>}
-      </div>
-    );
-  };
+  // Every editable value is rendered through the type-driven TypedField so the
+  // control + affordance (pick-list / bounded number / toggle / free text) is
+  // derived from the field's type rather than hand-rolled per call site.
+  const propField = (prop: string, inp: PropertyInput) => (
+    <TypedField
+      key={inp.name}
+      label={inp.label}
+      sub={inp.label !== inp.name ? inp.name : undefined}
+      descriptor={resolveInputType(inp.type)}
+      value={(propValues[prop]?.[inp.name] ?? '') as AttrValue}
+      onChange={(v) => setPropInput(prop, inp.name, v as number | boolean | string)}
+    />
+  );
 
-  // editable system modifiers, typed by the modifier's ModifierType.
-  const renderModifierControl = (m: Modifier) => {
-    const cur = modValues[m.name];
-    if (m.type.kind === 'bool') {
-      const on = cur === true;
-      return (
-        <button type="button" role="switch" aria-checked={on} aria-label={m.name} onClick={() => setModifier(m.name, !on)} className="flex items-center gap-1.5">
-          <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: on ? 'var(--accent)' : 'var(--ink-5)' }}>
-            <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: on ? 'translateX(12px)' : 'none' }} />
-          </span>
-          <span className="text-[11px] text-ink-2">{on ? 'on' : 'off'}</span>
-        </button>
-      );
-    }
-    if (m.type.kind === 'enum' || m.type.kind === 'enum_with_attributes') {
-      const opts = m.type.kind === 'enum' ? m.type.values : m.type.values.map((v) => v.name);
-      return (
-        <select className="input" aria-label={m.name} value={String(cur ?? '')} onChange={(e) => setModifier(m.name, e.target.value)}>
-          {opts.map((v) => <option key={v} value={v}>{v}</option>)}
-        </select>
-      );
-    }
-    const unit = m.type.kind === 'percentage' ? '%' : 'mm';
+  const modDefaults = useMemo(() => deriveModifierValues(system, model, initialModifiers), [system, model, initialModifiers]);
+  const modifierField = (m: Modifier) => {
+    const value = (modValues[m.name] ?? '') as AttrValue;
+    const locked = m.editable_at_takeoff === false;
+    const provenance = locked ? 'locked' : value === modDefaults[m.name] ? 'derived' : undefined;
     return (
-      <div className="flex items-center gap-1.5">
-        <input className="input w-full" inputMode="numeric" aria-label={m.name} value={typeof cur === 'number' ? cur : 0}
-          onChange={(e) => setModifier(m.name, Math.max(0, Number(e.target.value) || 0))} />
-        <span className="mono text-[11px] text-ink-3">{unit}</span>
-      </div>
+      <TypedField
+        key={m.name}
+        label={m.name}
+        sub={`${m.group} · ${m.type.kind}`}
+        descriptor={resolveModifierType(m.type)}
+        value={value}
+        onChange={(v) => setModifier(m.name, v as number | boolean | string)}
+        provenance={provenance}
+      />
     );
   };
-  // modifiers we render an editable control for (support_grid / discrete_set are skipped for now).
-  const editableModifiers = system.modifiers.filter((m) => m.enabled && m.type.kind !== 'support_grid' && m.type.kind !== 'discrete_set');
-  const skippedModifiers = system.modifiers.filter((m) => m.enabled && (m.type.kind === 'support_grid' || m.type.kind === 'discrete_set'));
+  // all enabled modifiers — support_grid / discrete_set now resolve to a visible
+  // "advanced" affordance instead of being silently dropped.
+  const allModifiers = system.modifiers.filter((m) => m.enabled);
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -340,41 +310,24 @@ export function PrimitiveTakeoff({
 
           <Section index="02" title="Criteria">
             <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
-              {Object.entries(criteriaValues).map(([k, v]) => {
-                const opts = criteriaOptions[k] ?? [];
-                return (
-                  <label key={k} className="flex flex-col gap-1">
-                    <span className="uc">{k}</span>
-                    {opts.length > 0 ? (
-                      <select className="input" aria-label={k} value={v} onChange={(e) => setCriterion(k, e.target.value)}>
-                        {/* keep the seeded value selectable even when no rule enumerates it */}
-                        {(opts.includes(v) ? opts : [v, ...opts]).map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    ) : (
-                      <input className="input" aria-label={k} value={v} onChange={(e) => setCriterion(k, e.target.value)} />
-                    )}
-                  </label>
-                );
-              })}
+              {Object.entries(criteriaValues).map(([k, v]) => (
+                <TypedField
+                  key={k}
+                  label={k}
+                  descriptor={resolveCriterion({ options: criteriaOptions[k] })}
+                  value={v}
+                  onChange={(nv) => setCriterion(k, String(nv ?? ''))}
+                  provenance={v === criteria[k] ? 'derived' : undefined}
+                />
+              ))}
             </div>
           </Section>
 
-          {editableModifiers.length > 0 && (
+          {allModifiers.length > 0 && (
             <Section index="03" title="Modifiers">
               <div className="grid grid-cols-3 gap-x-4 gap-y-2.5">
-                {editableModifiers.map((m) => (
-                  <label key={m.name} className="flex flex-col gap-1">
-                    <span className="uc">{m.name}</span>
-                    <span className="mono text-[9px] text-ink-4">{m.group} · {m.type.kind}</span>
-                    {renderModifierControl(m)}
-                  </label>
-                ))}
+                {allModifiers.map((m) => modifierField(m))}
               </div>
-              {skippedModifiers.length > 0 && (
-                <div className="mt-2.5 text-[11px] text-ink-3">
-                  Not yet editable here: {skippedModifiers.map((m) => `${m.name} (${m.type.kind})`).join(', ')} — applied via defaults.
-                </div>
-              )}
             </Section>
           )}
 
@@ -517,12 +470,7 @@ export function PrimitiveTakeoff({
                       </div>
                       {editable.length > 0 ? (
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 p-3">
-                          {editable.map((inp) => (
-                            <label key={inp.name} className="flex flex-col gap-1">
-                              <span className="mono text-[10px] text-ink-3">{inp.label}{inp.label !== inp.name ? ` · ${inp.name}` : ''}</span>
-                              {renderPropControl(p.name, inp)}
-                            </label>
-                          ))}
+                          {editable.map((inp) => propField(p.name, inp))}
                         </div>
                       ) : (
                         <div className="px-3 py-2 text-[11px] text-ink-3">No take-off inputs — quantity is derived.</div>
