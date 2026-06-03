@@ -17,6 +17,7 @@ import type {
 import type { AlgoOutput } from './algorithms/types';
 import type { GeometryParts } from './geometry/segmentation';
 import { chainLength } from './geometry/dimension-chain';
+import { activeBandIndex } from './bands';
 
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
 
@@ -206,8 +207,8 @@ export type SkuContext = {
 function bandSkuKey(name: string, value: number, mods: Modifier[]): string {
   const m = mods.find((x) => x.name === name);
   if (m?.type.kind === 'banded_distance') {
-    const band = m.type.bands.find((b) => value >= b.range[0] && value <= b.range[1]);
-    return band?.sku_key ?? '';
+    const i = activeBandIndex(value, m.type.bands);
+    return i >= 0 ? m.type.bands[i].sku_key : '';
   }
   return String(value);
 }
