@@ -243,7 +243,10 @@ export const exampleSystems: System[] = [
           { id: 'em-rail', material_id: 'mat-evo-handrail', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: aw } },
           { id: 'em-knee', material_id: 'mat-evo-kneerail', rule: { qty_kind: 'algorithm', algorithm_config: { algorithm: 'pack_stock', inputs: {} }, applies_when: aw } },
           { id: 'em-base', material_id: 'mat-evo-base', rule: { qty_kind: 'per', per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, sku_lookup: { table: 'base', keys: [{ kind: 'modifier', name: 'base_type' }] }, applies_when: aw } },
-          { id: 'em-cw', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 2, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: {} } } },
+          // counterweights per upright scale with the wind zone (2 / 3 / 4 per leg)
+          { id: 'em-cw', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 2, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['1'] } } } },
+          { id: 'em-cw-z2', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 3, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['2'] } } } },
+          { id: 'em-cw-z3', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 4, per: { kind: 'algorithm_output', algorithm: 'place_supports', field: 'supports' }, applies_when: { variants: ['Freestanding'], criteria: { wind_zone: ['3'] } } } },
           { id: 'em-cw-end', material_id: 'mat-evo-cw', rule: { qty_kind: 'per', qty: 1, per: { kind: 'derived', name: 'free_ends_count' }, applies_when: { variants: ['Freestanding'], criteria: {} } } },
           { id: 'em-corner', material_id: 'mat-evo-corner', rule: { qty_kind: 'per', per: { kind: 'derived', name: 'junction_corner' }, applies_when: aw } },
           { id: 'em-cap', material_id: 'mat-evo-endcap', rule: { qty_kind: 'per', qty: 2, per: { kind: 'derived', name: 'free_ends_count' }, applies_when: aw } },

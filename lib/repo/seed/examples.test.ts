@@ -83,6 +83,13 @@ describe('worked example 3 — EVO freestanding guardrail, L-shaped 16 m (length
     });
     expect(bySku(r3)['UPR-STR-AL']).toBe(7);
   });
+  it('counterweights scale with wind zone (zone 2 → 3/upright = 38, vs 26 at zone 1)', () => {
+    const r2 = resolveTakeoff({
+      system: s, model: model(s, 'mdl-evo-fs'), variant: v, materials: seed.materials, resolveSubAssembly, resolveAttachedSystem,
+      input: { criteria_values: { compliance_code: 'NF_E85-015', wind_zone: '2' }, modifier_values: { upright_angle: 'straight', base_type: 'freestanding' }, primitive_input: { mode: 'segmented', segments: [{ length: 10000, junction_after: { type: 'corner' } }, { length: 6000 }] }, property_values: {} },
+    });
+    expect(bySku(r2)['03468']).toBe(3 * 12 + 2);
+  });
 });
 
 describe('worked example — Vectaladder → EVO walkway attachment (joint kit 03008, one cut pool)', () => {

@@ -60,8 +60,10 @@ the guide's hand-rounded figures — these are correct, not bugs:
 - ~~Brackets place over the whole run, not per flight~~ Covered by the same
   `per_segment` flag (geometry segment lengths are passed to the placer); opt in
   per placement rule.
-- **Wind-zone counterweight scaling** is fixed at 2/leg (zone 1) via the rule; the
-  2/3/4 scaling by `wind_zone` wants `criteria_driven_defaults`. Follow-up.
+- ~~Wind-zone counterweight scaling is fixed at 2/leg~~ **Done** — counterweights
+  scale 2 / 3 / 4 per upright by `wind_zone` (1 / 2 / 3) via `applies_when.criteria`
+  on the counterweight rule (no `criteria_driven_defaults` needed). Zone 1 → 26;
+  zone 2 → 38.
 - **Rest-platform L/R** uses one SKU; handedness-by-junction needs a `junction_attr`
   SKU key. Follow-up.
 
