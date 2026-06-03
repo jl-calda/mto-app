@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { TopBar, Sidebar, type Crumb, type RecentItem } from './chrome';
+import { MobileNavProvider } from './chrome/mobile-nav-context';
+import { MobileSidebarDrawer } from './chrome/mobile-sidebar';
 import { HelpProvider } from './help/help-context';
 import { HelpLayout } from './help/help-layout';
 import { GuideButton } from './help/guide-button';
@@ -48,15 +50,19 @@ export async function Shell({
     recent.push({ label: 'Roof sheet cladding', href: '/takeoff/area', color: '#5A8F2A', tag: 'v3' });
   }
 
+  const source = getRepoSource();
   return (
-    <HelpProvider defaultTopic={topicForNav(navActive)}>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <TopBar crumbs={crumbs} right={<><GuideButton />{topRight}</>} env={process.env.VERCEL_ENV ?? 'dev'} />
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={getRepoSource()} />}
-          <HelpLayout scroll={scroll}>{children}</HelpLayout>
+    <MobileNavProvider>
+      <HelpProvider defaultTopic={topicForNav(navActive)}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <TopBar crumbs={crumbs} right={<><GuideButton />{topRight}</>} env={process.env.VERCEL_ENV ?? 'dev'} showNavToggle={sidebar} />
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            {sidebar && <Sidebar active={navActive} counts={counts} recent={recent} source={source} />}
+            {sidebar && <MobileSidebarDrawer active={navActive} counts={counts} recent={recent} source={source} />}
+            <HelpLayout scroll={scroll}>{children}</HelpLayout>
+          </div>
         </div>
-      </div>
-    </HelpProvider>
+      </HelpProvider>
+    </MobileNavProvider>
   );
 }
