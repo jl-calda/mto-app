@@ -1,151 +1,211 @@
 'use client';
 
-// The Inputs → Outputs dependency graph: two columns of subgroup "boxes" with a
-// flow arrow between them, then a full-width "Materials & gating" breakdown that
-// shows *how* each input gates / counts / SKU-keys every material a model emits.
-// Box headers deep-link to the glossary concept. Driven entirely by a TreeModel.
+// The Guide's dependency graph rendered as a top-down node-link DAG (React Flow +
+// dagre layout): the measurement / variants / modifiers / criteria / properties
+// flow down into each material, then material → model → MTO. Edges are coloured by
+// role (gate / qty / sku / measure / feeds). Selecting a material highlights just
+// the inputs it depends on; clicking an input deep-links to its glossary card.
+// Driven by the system graph on `model.graph`, or the generic concept map.
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ReactFlow, ReactFlowProvider, Background, BackgroundVariant, Controls,
+  Handle, Position, MarkerType, useNodesState, useEdgesState, useReactFlow,
+  type Node, type Edge, type NodeProps,
+} from '@xyflow/react';
+import dagre from '@dagrejs/dagre';
 import { useHelp } from './help-context';
 import { CONCEPT_BY_ID } from '@/lib/help/content';
-import type { MaterialNode, SubGroup, Tag, TreeGroup, TreeModel } from '@/lib/help/tree';
+import { buildGenericGraph, type GraphEdge, type GraphEdgeRole, type GraphModel, type GraphNode } from '@/lib/help/graph';
+import type { TreeModel } from '@/lib/help/tree';
 
-function tagColor(t: Tag): string {
-  if (t.kind) return CONCEPT_BY_ID[t.kind].color;
-  switch (t.tone) {
-    case 'qty': return 'var(--ok)';
-    case 'sku': return 'var(--accent)';
-    case 'gate': return 'var(--ink-3)';
-    default: return 'var(--ink-4)';
-  }
-}
+const NODE_W = 184;
+const NODE_H = 48;
 
-function TagChip({ t }: { t: Tag }) {
+const ROLE_COLOR: Record<GraphEdgeRole, string> = {
+  gate: 'var(--ink-3)',
+  qty: 'var(--ok)',
+  sku: 'var(--accent)',
+  feeds: 'var(--line-strong)',
+  measure: 'var(--ink-4)',
+};
+const ROLE_LABEL: Record<GraphEdgeRole, string> = {
+  gate: 'gates', qty: 'drives qty', sku: 'picks SKU', feeds: 'feeds', measure: 'measured',
+};
+
+// ── custom node (one component, styled by kind/concept) ──
+function FlowNode({ data }: NodeProps) {
+  const d = data as unknown as GraphNode;
+  const color = d.concept ? CONCEPT_BY_ID[d.concept].color : 'var(--ink-3)';
+  const material = d.kind === 'material';
+  const mto = d.kind === 'mto';
+  const clickable = material || !!d.concept;
   return (
-    <span className="inline-flex items-center gap-1 rounded border border-line px-1 py-px text-[9px] leading-none text-ink-2">
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tagColor(t) }} />
-      {t.text}
-    </span>
-  );
-}
-
-function TagRow({ tags }: { tags?: Tag[] }) {
-  if (!tags || tags.length === 0) return null;
-  return <div className="mt-0.5 flex flex-wrap gap-1">{tags.map((t, i) => <TagChip key={i} t={t} />)}</div>;
-}
-
-function Box({ sg }: { sg: SubGroup }) {
-  const { openTopic } = useHelp();
-  const color = sg.kind ? CONCEPT_BY_ID[sg.kind].color : 'var(--ink-4)';
-  return (
-    <div className="overflow-hidden rounded-md border border-line bg-panel">
-      <button
-        type="button"
-        disabled={!sg.kind}
-        onClick={() => sg.kind && openTopic(sg.kind)}
-        className="flex w-full items-center gap-1.5 border-b border-line bg-panel-2 px-2 py-1 text-left"
-        title={sg.kind ? `What is a ${sg.label.replace(/s$/, '')}?` : undefined}
+    <div
+      title={d.label}
+      style={{
+        width: NODE_W, minHeight: NODE_H,
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1,
+        padding: '6px 9px', borderRadius: 6,
+        border: `1px solid ${material ? 'var(--line-strong)' : 'var(--line)'}`,
+        borderLeft: `3px solid ${color}`,
+        background: material ? 'var(--panel-2)' : 'var(--panel)',
+        boxShadow: 'var(--shadow-card)',
+        cursor: clickable ? 'pointer' : 'default',
+      }}
+    >
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <div
+        style={{
+          fontSize: 12, fontWeight: mto ? 700 : 500, color: 'var(--ink)', lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
       >
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
-        <span className="flex-1 text-[12px] font-medium">{sg.label}</span>
-        {sg.items.length > 0 && <span className="mono text-[10px] text-ink-4">{sg.items.length}</span>}
-      </button>
-      <div className="flex flex-col gap-1.5 p-1.5">
-        {sg.items.map((it, i) => (
-          <div key={i} className="leading-tight">
-            <div className="text-[11px] text-ink">{it.label}</div>
-            {it.detail && <div className="mono text-[9px] text-ink-3">{it.detail}</div>}
-            {it.chips && it.chips.length > 0 && (
-              <div className="mt-0.5 flex flex-wrap gap-0.5">
-                {it.chips.map((c, j) => <span key={j} className="tag" style={{ fontSize: 9 }}>{c}</span>)}
-              </div>
-            )}
-            <TagRow tags={it.tags} />
-          </div>
-        ))}
-        {sg.items.length === 0 && <div className="text-[10px] text-ink-4">—</div>}
+        {d.label}
       </div>
+      {d.sub && <div className="mono" style={{ fontSize: 9, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.sub}</div>}
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
     </div>
   );
 }
 
-function Column({ group }: { group: TreeGroup }) {
+// Defined once at module scope (React Flow warns if the object identity changes).
+const NODE_TYPES = { node: FlowNode };
+
+function toEdge(e: GraphEdge): Edge {
+  const color = ROLE_COLOR[e.role];
+  return {
+    id: e.id, source: e.source, target: e.target,
+    type: 'smoothstep',
+    label: e.label,
+    markerEnd: { type: MarkerType.ArrowClosed, color, width: 14, height: 14 },
+    style: { stroke: color, strokeWidth: 1.5, strokeDasharray: e.role === 'measure' ? '4 3' : undefined },
+    labelStyle: { fontSize: 9, fill: 'var(--ink-2)' },
+    labelBgStyle: { fill: 'var(--panel)', fillOpacity: 0.9 },
+    labelBgPadding: [3, 1] as [number, number],
+    labelBgBorderRadius: 2,
+    data: { role: e.role },
+  };
+}
+
+function layout(model: GraphModel): { nodes: Node[]; edges: Edge[] } {
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', ranksep: 60, nodesep: 24, marginx: 16, marginy: 16 });
+  g.setDefaultEdgeLabel(() => ({}));
+  for (const n of model.nodes) g.setNode(n.id, { width: NODE_W, height: NODE_H });
+  for (const e of model.edges) g.setEdge(e.source, e.target);
+  dagre.layout(g);
+  const nodes: Node[] = model.nodes.map((n) => {
+    const p = g.node(n.id);
+    return {
+      id: n.id, type: 'node',
+      data: n as unknown as Record<string, unknown>,
+      position: { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 },
+      sourcePosition: Position.Bottom, targetPosition: Position.Top,
+    };
+  });
+  return { nodes, edges: model.edges.map(toEdge) };
+}
+
+function Flow({ graph }: { graph: GraphModel }) {
+  const { openTopic } = useHelp();
+  const rf = useReactFlow();
+  const base = useMemo(() => layout(graph), [graph]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(base.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(base.edges);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Re-layout + refit when the graph changes (different system, or live wizard edits).
+  useEffect(() => {
+    setNodes(base.nodes);
+    setEdges(base.edges);
+    setSelected(null);
+    const id = requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 200 }));
+    return () => cancelAnimationFrame(id);
+  }, [base, setNodes, setEdges, rf]);
+
+  // The dependency set of the selected material (its incoming edges + their sources).
+  const dep = useMemo(() => {
+    if (!selected) return null;
+    const incoming = graph.edges.filter((e) => e.target === selected);
+    return {
+      edges: new Set(incoming.map((e) => e.id)),
+      nodes: new Set<string>([selected, ...incoming.map((e) => e.source)]),
+    };
+  }, [selected, graph]);
+
+  const viewNodes = useMemo(() => (
+    !dep ? nodes : nodes.map((n) => ({ ...n, style: { ...n.style, opacity: dep.nodes.has(n.id) ? 1 : 0.2 } }))
+  ), [nodes, dep]);
+  const viewEdges = useMemo(() => (
+    !dep ? edges : edges.map((e) => {
+      const on = dep.edges.has(e.id);
+      return { ...e, animated: on, style: { ...e.style, opacity: on ? 1 : 0.1, strokeWidth: on ? 2.4 : 1.5 } };
+    })
+  ), [edges, dep]);
+
+  const onNodeClick = useCallback((_: unknown, node: Node) => {
+    const d = node.data as unknown as GraphNode;
+    if (d.kind === 'material') setSelected((prev) => (prev === node.id ? null : node.id));
+    else {
+      setSelected(null);
+      if (d.concept) openTopic(d.concept);
+    }
+  }, [openTopic]);
+
   return (
-    <div className="flex min-w-[150px] flex-1 flex-col gap-1.5">
-      <div className="uc">{group.label}</div>
-      {group.subgroups.map((sg) => <Box key={sg.id} sg={sg} />)}
-    </div>
+    <ReactFlow
+      nodes={viewNodes}
+      edges={viewEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={onNodeClick}
+      onPaneClick={() => setSelected(null)}
+      nodeTypes={NODE_TYPES}
+      fitView
+      fitViewOptions={{ padding: 0.2 }}
+      minZoom={0.2}
+      maxZoom={2}
+      nodesConnectable={false}
+      proOptions={{ hideAttribution: false }}
+    >
+      <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--line)" />
+      <Controls showInteractive={false} />
+    </ReactFlow>
   );
 }
 
-function MaterialRow({ node }: { node: MaterialNode }) {
-  return (
-    <div className="border-b border-line px-2 py-1.5 last:border-b-0">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-medium text-ink">{node.label}</span>
-        {node.detail && <span className="mono shrink-0 text-[9px] text-ink-3">{node.detail}</span>}
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1">
-        <span className="uc text-ink-4" style={{ fontSize: 8 }}>when</span>
-        {node.when.map((t, i) => <TagChip key={i} t={t} />)}
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1">
-        {node.qty && (
-          <span className="inline-flex items-center gap-1 rounded border border-line px-1 py-px text-[9px] leading-none text-ink-2">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--ok)' }} />
-            {node.qty}
-          </span>
-        )}
-        {node.skuFrom && node.skuFrom.length > 0 && (
-          <>
-            <span className="uc text-ink-4" style={{ fontSize: 8 }}>SKU ←</span>
-            {node.skuFrom.map((t, i) => <TagChip key={i} t={t} />)}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+const GENERIC_GRAPH = buildGenericGraph();
 
-function MaterialsBreakdown({ nodes }: { nodes: MaterialNode[] }) {
-  // Group rows by model, preserving first-seen order.
-  const models: string[] = [];
-  for (const n of nodes) if (!models.includes(n.model)) models.push(n.model);
-  return (
-    <div className="overflow-hidden rounded-md border border-line bg-panel">
-      <div className="flex items-center gap-1.5 border-b border-line bg-panel-2 px-2 py-1">
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CONCEPT_BY_ID.mto.color }} />
-        <span className="flex-1 text-[12px] font-medium">Materials &amp; gating</span>
-        <span className="mono text-[10px] text-ink-4">{nodes.length}</span>
-      </div>
-      {models.map((model) => (
-        <div key={model}>
-          {models.length > 1 && (
-            <div className="mono border-b border-line bg-panel-2 px-2 py-0.5 text-[9px] text-ink-3">{model}</div>
-          )}
-          {nodes.filter((n) => n.model === model).map((n) => <MaterialRow key={n.id} node={n} />)}
-        </div>
-      ))}
-    </div>
-  );
-}
+const LEGEND: GraphEdgeRole[] = ['gate', 'qty', 'sku', 'measure', 'feeds'];
 
 export function DependencyGraph({ model }: { model: TreeModel }) {
-  const inputs = model.groups.find((g) => g.id === 'inputs');
-  const outputs = model.groups.find((g) => g.id === 'outputs');
+  const graph = model.graph ?? GENERIC_GRAPH;
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-line bg-panel p-3">
-      {(model.title || model.subtitle) && (
+    <div className="flex flex-col gap-2">
+      {(graph.title || graph.subtitle) && (
         <div>
-          {model.title && <div className="text-[13px] font-semibold">{model.title}</div>}
-          {model.subtitle && <div className="mono text-[10px] text-ink-3">{model.subtitle}</div>}
+          {graph.title && <div className="text-[13px] font-semibold">{graph.title}</div>}
+          {graph.subtitle && <div className="mono text-[10px] text-ink-3">{graph.subtitle}</div>}
         </div>
       )}
-      <div className="flex items-stretch gap-1.5 overflow-x-auto">
-        {inputs && <Column group={inputs} />}
-        <div className="flex shrink-0 items-center px-0.5 text-[14px] text-ink-4" aria-hidden>→</div>
-        {outputs && <Column group={outputs} />}
+      <div
+        className="overflow-hidden rounded-md border border-line bg-panel"
+        style={{ width: '100%', height: 'calc(100vh - var(--h-topbar) - 168px)', minHeight: 420 }}
+      >
+        <ReactFlowProvider>
+          <Flow graph={graph} />
+        </ReactFlowProvider>
       </div>
-      {model.materials && model.materials.length > 0 && <MaterialsBreakdown nodes={model.materials} />}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {LEGEND.map((r) => (
+          <span key={r} className="inline-flex items-center gap-1 text-[9px] text-ink-3">
+            <span style={{ display: 'inline-block', width: 12, height: 0, borderTop: `2px ${r === 'measure' ? 'dashed' : 'solid'} ${ROLE_COLOR[r]}` }} />
+            {ROLE_LABEL[r]}
+          </span>
+        ))}
+        <span className="text-[9px] text-ink-4">· click a material to trace its dependencies · click an input to read about it</span>
+      </div>
     </div>
   );
 }
