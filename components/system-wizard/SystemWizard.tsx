@@ -13,7 +13,9 @@ import { PropertiesEditor } from './PropertiesEditor';
 import { Card } from './parts';
 import { VisualEditor } from '@/components/visual-editor';
 
-const STEPS = ['Primitive', 'Modifiers', 'Variants & criteria', 'Properties'];
+// Authoring order: measure → families → tuning → quantities. (Step component
+// filenames keep their original numbering; render order below is what matters.)
+const STEPS = ['Primitive', 'Variants & criteria', 'Modifiers', 'Properties'];
 
 function xrefLabel(x: XRef): string {
   switch (x.kind) {
@@ -95,8 +97,8 @@ export function SystemWizard({ initial, isNew }: { initial: System; isNew?: bool
       {/* step body */}
       <div className="pb-4">
         {step === 0 && <Step1Primitive system={system} setSystem={setSystem} />}
-        {step === 1 && <Step2Modifiers system={system} setSystem={setSystem} />}
-        {step === 2 && <Step3Variants system={system} setSystem={setSystem} />}
+        {step === 1 && <Step3Variants system={system} setSystem={setSystem} />}
+        {step === 2 && <Step2Modifiers system={system} setSystem={setSystem} />}
         {step === 3 && <PropertiesEditor system={system} setSystem={setSystem} />}
       </div>
 

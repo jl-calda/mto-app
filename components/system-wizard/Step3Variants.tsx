@@ -19,7 +19,6 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
   const [sel, setSel] = useState(0);
   const cols = system.variants.attribute_columns;
   const rows = system.variants.rows;
-  const names = rows.map(rowName);
 
   // ── attribute columns ──
   const addCol = () => setSystem((s) => ({ ...s, variants: { ...s.variants, attribute_columns: [...s.variants.attribute_columns, { name: `attr_${s.variants.attribute_columns.length + 1}`, type: { kind: 'bool' } }] } }));
@@ -42,19 +41,8 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
     setSystem((s) => ({ ...s, criteria: s.criteria.map((c, j) => (j === i ? { ...c, ...patch } : c)) }));
   const removeCrit = (i: number) => setSystem((s) => ({ ...s, criteria: s.criteria.filter((_, j) => j !== i) }));
 
-  // ── variant×property matrix ──
+  // read-only: which properties apply to a variant (the gating matrix is edited in the Properties step)
   const isOn = (p: PropertyInstance, name: string) => !p.applies_to_variants?.length || p.applies_to_variants.includes(name);
-  const toggleCell = (propName: string, name: string) =>
-    setSystem((s) => ({
-      ...s,
-      properties: s.properties.map((p) => {
-        if (p.name !== propName) return p;
-        const cur = p.applies_to_variants?.length ? p.applies_to_variants : names;
-        const next = cur.includes(name) ? cur.filter((v) => v !== name) : [...cur, name];
-        const all = names.length > 0 && names.every((v) => next.includes(v));
-        return { ...p, applies_to_variants: all ? undefined : next };
-      }),
-    }));
 
   const selRow = rows[sel];
 
@@ -120,42 +108,6 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
             ))}
             {system.criteria.length === 0 && <div className="text-[12px] text-ink-3">No criteria.</div>}
           </div>
-        </Card>
-
-        {/* variant × property matrix */}
-        <Card title="Variant × property matrix">
-          {system.properties.length === 0 || rows.length === 0 ? (
-            <div className="text-[12px] text-ink-3">Add variants here and properties in step 4 — then gate which properties each variant asks for.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-[12px]">
-                <thead>
-                  <tr>
-                    <th className="border-b border-line p-1.5 text-left uc">variant ╲ property</th>
-                    {system.properties.map((p) => <th key={p.name} className="border-b border-line p-1.5 text-left uc">{p.name}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {names.map((nm) => (
-                    <tr key={nm}>
-                      <td className="border-b border-line p-1.5 font-medium">{nm}</td>
-                      {system.properties.map((p) => {
-                        const on = isOn(p, nm);
-                        return (
-                          <td key={p.name} className="border-b border-line p-1.5">
-                            <button type="button" onClick={() => toggleCell(p.name, nm)} className="flex h-5 w-5 items-center justify-center rounded" style={{ background: on ? 'var(--ok-soft)' : 'var(--bg-2)', color: on ? 'var(--ok)' : 'var(--ink-4)', border: '1px solid var(--line)' }}>
-                              {on ? '✓' : '·'}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-2 text-[10px] text-ink-3">A row that is all-on means the property is unrestricted. The engine skips a property for variants where it is off.</div>
-            </div>
-          )}
         </Card>
       </div>
 

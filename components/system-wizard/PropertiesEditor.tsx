@@ -1,10 +1,14 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ChainRole, PropertyArchetype, PropertyInput, PropertyInstance, PropertyScope, System } from '@/lib/types';
+import type { ChainRole, PropertyArchetype, PropertyInput, PropertyInstance, PropertyScope, System, SystemVariantRef } from '@/lib/types';
 import { Card, Field, NumberInput, Select, Stub, TextInput } from './parts';
 import { SpansEditor } from './SpansEditor';
 import { PlacementRulesEditor } from './PlacementRulesEditor';
+
+function rowName(r: SystemVariantRef): string {
+  return r.kind === 'local' ? r.name : r.variant_id;
+}
 
 const ARCHETYPES: PropertyArchetype[] = ['spacing', 'count', 'rate', 'stock', 'variant', 'threshold', 'junction'];
 const SCOPES = ['per_segment', 'per_junction', 'per_mount_surface', 'set_level', 'per_span'] as const;
@@ -39,6 +43,21 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
     }));
   const setInputDefault = (pi: number, ii: number, value: number) =>
     setSystem((s) => ({ ...s, properties: s.properties.map((p, j) => (j === pi ? { ...p, inputs: p.inputs.map((inp, k) => (k === ii ? { ...inp, default: value } : inp)) } : p)) }));
+
+  // ── variant×property matrix (gate which properties each variant asks for) ──
+  const names = system.variants.rows.map(rowName);
+  const isOn = (p: PropertyInstance, name: string) => !p.applies_to_variants?.length || p.applies_to_variants.includes(name);
+  const toggleCell = (propName: string, name: string) =>
+    setSystem((s) => ({
+      ...s,
+      properties: s.properties.map((p) => {
+        if (p.name !== propName) return p;
+        const cur = p.applies_to_variants?.length ? p.applies_to_variants : names;
+        const next = cur.includes(name) ? cur.filter((v) => v !== name) : [...cur, name];
+        const all = names.length > 0 && names.every((v) => next.includes(v));
+        return { ...p, applies_to_variants: all ? undefined : next };
+      }),
+    }));
 
   return (
     <div className="flex flex-col gap-3">
@@ -89,6 +108,41 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
           ))}
           {props.length === 0 && <div className="py-2 text-[12px] text-ink-3">No properties yet.</div>}
         </div>
+      </Card>
+
+      <Card title="Variant × property matrix">
+        {props.length === 0 || names.length === 0 ? (
+          <div className="text-[12px] text-ink-3">Add variants (earlier step) and properties above — then gate which properties each variant asks for.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[12px]">
+              <thead>
+                <tr>
+                  <th className="border-b border-line p-1.5 text-left uc">variant ╲ property</th>
+                  {props.map((p) => <th key={p.name} className="border-b border-line p-1.5 text-left uc">{p.name}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {names.map((nm) => (
+                  <tr key={nm}>
+                    <td className="border-b border-line p-1.5 font-medium">{nm}</td>
+                    {props.map((p) => {
+                      const on = isOn(p, nm);
+                      return (
+                        <td key={p.name} className="border-b border-line p-1.5">
+                          <button type="button" onClick={() => toggleCell(p.name, nm)} className="flex h-5 w-5 items-center justify-center rounded" style={{ background: on ? 'var(--ok-soft)' : 'var(--bg-2)', color: on ? 'var(--ok)' : 'var(--ink-4)', border: '1px solid var(--line)' }}>
+                            {on ? '✓' : '·'}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-2 text-[10px] text-ink-3">A row that is all-on means the property is unrestricted. The engine skips a property for variants where it is off.</div>
+          </div>
+        )}
       </Card>
 
       <SpansEditor system={system} setSystem={setSystem} />
