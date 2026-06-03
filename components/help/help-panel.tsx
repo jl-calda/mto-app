@@ -45,7 +45,8 @@ export function HelpPanel() {
       {view === 'tree' ? (
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3.5">
           <p className="m-0 text-[12px] text-ink-2">
-            What goes <b>in</b> (variants, modifiers, criteria, properties) and what comes <b>out</b> (models → MTO){subject ? ' for this system' : ''}. Click a box to read about it.
+            What goes <b>in</b> (variants, modifiers, criteria, properties) and what comes <b>out</b> (models → MTO){subject ? ' for this system' : ''}.
+            {subject ? ' The breakdown below shows how each input gates, counts and SKU-keys every material.' : ''} Click a box to read about it.
           </p>
           <DependencyGraph model={subject ?? GENERIC_TREE} />
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 // Renders the scrollable <main> plus the collapsible Guide <aside> as flex
-// siblings. When the panel opens, the aside takes 360px and main reflows — the
+// siblings. When the panel opens, the aside takes 400px and main reflows — the
 // "push" is the natural flex consequence. The aside mirrors the Sidebar's sticky
 // full-height pattern so it scrolls independently and the topbar stays put.
 
@@ -19,7 +19,7 @@ export function HelpLayout({ children, scroll = true }: { children: ReactNode; s
       <aside
         aria-hidden={!open}
         style={{
-          width: open ? 360 : 0,
+          width: open ? 400 : 0,
           flexShrink: 0,
           overflow: 'hidden',
           borderLeft: open ? '1px solid var(--line)' : 'none',

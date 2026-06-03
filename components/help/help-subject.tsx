@@ -5,15 +5,15 @@
 // navigation so other pages fall back to the generic tree.
 
 import { useEffect } from 'react';
-import type { System } from '@/lib/types';
+import type { Material, System } from '@/lib/types';
 import { useHelp } from './help-context';
 import { buildSystemTree } from '@/lib/help/tree';
 
-export function HelpSubjectSystem({ system }: { system: System }) {
+export function HelpSubjectSystem({ system, materials = [] }: { system: System; materials?: Material[] }) {
   const { setSubject } = useHelp();
   useEffect(() => {
-    setSubject(buildSystemTree(system));
+    setSubject(buildSystemTree(system, materials));
     return () => setSubject(null);
-  }, [system, setSubject]);
+  }, [system, materials, setSubject]);
   return null;
 }

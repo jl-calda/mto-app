@@ -22,11 +22,13 @@ export default async function SystemPage({ params }: { params: Promise<{ id: str
 
   // other systems available to attach (excluding this one), for the editor's picker
   const otherSystems = (await repo.listSystems()).filter((s) => s.id !== system.id).map((s) => ({ id: s.id, name: s.name }));
+  // material catalogue → resolves SKUs/names in the Guide's gating breakdown
+  const materials = await repo.listMaterials();
 
   return (
     <Shell navActive="systems" crumbs={[{ label: 'Systems', href: '/systems' }, { label: system.name }]}>
       <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
-        <HelpSubjectSystem system={system} />
+        <HelpSubjectSystem system={system} materials={materials} />
         <div className="flex items-end justify-between border-b border-line pb-3.5">
           <div className="flex items-center gap-3">
             <Visual visual={system.visual} name={system.name} size={40} rounded={6} />

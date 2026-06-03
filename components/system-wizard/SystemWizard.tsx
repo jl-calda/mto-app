@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { System } from '@/lib/types';
+import type { Material, System } from '@/lib/types';
 import { deriveRuleContext, type XRef } from '@/lib/engine';
 import { saveSystemAction } from '@/app/systems/actions';
 import { useHelp } from '@/components/help/help-context';
@@ -42,7 +42,7 @@ function CtxList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-export function SystemWizard({ initial, isNew }: { initial: System; isNew?: boolean }) {
+export function SystemWizard({ initial, isNew, materials = [] }: { initial: System; isNew?: boolean; materials?: Material[] }) {
   const router = useRouter();
   const [system, setSystem] = useState<System>(initial);
   const [step, setStep] = useState(0);
@@ -54,9 +54,9 @@ export function SystemWizard({ initial, isNew }: { initial: System; isNew?: bool
   // Publish the live draft into the Guide so its dependency tree updates as you edit.
   const { setSubject } = useHelp();
   useEffect(() => {
-    setSubject(buildSystemTree(system));
+    setSubject(buildSystemTree(system, materials));
     return () => setSubject(null);
-  }, [system, setSubject]);
+  }, [system, materials, setSubject]);
 
   async function save() {
     setStatus('saving');
