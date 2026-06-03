@@ -188,7 +188,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                   </div>
                 </button>
                 <span className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>{mm.rule.qty_kind}</span>
-                <button className="btn sm danger" onClick={() => removeMaterial(mm.id)}>×</button>
+                <button className="btn sm danger" aria-label="Remove material" onClick={() => removeMaterial(mm.id)}>×</button>
               </div>
             );
           })}

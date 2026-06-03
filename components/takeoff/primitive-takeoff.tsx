@@ -289,7 +289,7 @@ export function PrimitiveTakeoff({
           <Section index="03" title={`Primitive · ${primitive}${segmented ? ' · segmented' : ''}`}>
             {canSegment && (
               <div className="mb-2.5 flex items-center gap-2">
-                <button onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
+                <button type="button" role="switch" aria-checked={segmented} aria-label="Segmented run" onClick={() => setSegmented((s) => !s)} className="flex items-center gap-1.5">
                   <span className="flex h-4 w-7 items-center rounded-full px-0.5 transition-colors" style={{ background: segmented ? 'var(--accent)' : 'var(--ink-5)' }}>
                     <span className="h-3 w-3 rounded-full bg-white transition-transform" style={{ transform: segmented ? 'translateX(12px)' : 'none' }} />
                   </span>
@@ -323,7 +323,7 @@ export function PrimitiveTakeoff({
                       </select>
                     )}
                     <span className="flex-1" />
-                    {segs.length > 1 && <button className="btn sm danger" onClick={() => setSegs((arr) => arr.filter((_, j) => j !== i))}>×</button>}
+                    {segs.length > 1 && <button className="btn sm danger" aria-label={`Remove segment ${i + 1}`} onClick={() => setSegs((arr) => arr.filter((_, j) => j !== i))}>×</button>}
                   </div>
                 ))}
                 <button className="btn sm self-start" onClick={() => setSegs((arr) => [...arr, { length: 6000, junction: 'corner' }])}>+ Add segment</button>
@@ -459,6 +459,7 @@ export function PrimitiveTakeoff({
                   return (
                     <div key={att.id} className="rounded border" style={{ borderColor: on ? 'var(--accent-line)' : 'var(--line-2)', background: on ? 'var(--panel)' : 'var(--panel-2)' }}>
                       <button
+                        type="button" role="switch" aria-checked={on} aria-label={`Include ${att.role_label}`}
                         onClick={() => setAttState((s) => ({ ...s, [att.id]: { ...s[att.id], attachment_id: att.id, included: !on } }))}
                         className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
                       >

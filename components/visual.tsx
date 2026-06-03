@@ -100,6 +100,7 @@ export function Visual({
   if (v.kind === 'emoji') {
     return (
       <div
+        aria-hidden="true"
         style={{
           ...dims,
           borderRadius: radius,
@@ -134,6 +135,7 @@ export function Visual({
         }}
       >
         <svg
+          aria-hidden="true"
           width={size * 0.65}
           height={size * 0.65}
           viewBox="0 0 24 24"
@@ -152,6 +154,7 @@ export function Visual({
   const [bg, fg] = hashColor(name);
   return (
     <div
+      aria-hidden="true"
       style={{
         ...dims,
         borderRadius: radius,

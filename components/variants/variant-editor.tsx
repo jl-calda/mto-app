@@ -100,7 +100,7 @@ export function VariantEditor({ variant, isNew, onClose }: { variant: Variant; i
             <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
               <Field label="key"><TextInput mono value={row.key} onChange={(v) => setAttr(i, { key: v })} /></Field>
               <Field label="value" hint="true/false or number coerced"><TextInput mono value={row.value} onChange={(v) => setAttr(i, { value: v })} /></Field>
-              <button className="btn sm danger" onClick={() => setAttrs((a) => a.filter((_, j) => j !== i))}>×</button>
+              <button className="btn sm danger" aria-label="Remove attribute" onClick={() => setAttrs((a) => a.filter((_, j) => j !== i))}>×</button>
             </div>
           ))}
           {attrs.length === 0 && <div className="text-[12px] text-ink-3">No attributes.</div>}
