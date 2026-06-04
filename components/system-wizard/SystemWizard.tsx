@@ -14,6 +14,8 @@ import { Step3Variants } from './Step3Variants';
 import { PropertiesEditor } from './PropertiesEditor';
 import { Card } from './parts';
 import { VisualEditor } from '@/components/visual-editor';
+import { validateSystem } from '@/lib/validate';
+import { WarningBadge, WarningList } from '@/components/warnings/warning-list';
 
 // Authoring order: measure → families → tuning → quantities. (Step component
 // filenames keep their original numbering; render order below is what matters.)
@@ -50,6 +52,7 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
   const [error, setError] = useState<string>();
 
   const ctx = useMemo(() => deriveRuleContext(system), [system]);
+  const warnings = useMemo(() => validateSystem(system), [system]);
 
   // Publish the live draft into the Guide so its dependency tree updates as you edit.
   const { setSubject } = useHelp();
@@ -84,6 +87,7 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
         <div className="flex flex-wrap items-center gap-2">
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
           {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
+          <WarningBadge warnings={warnings} />
           <Link href={isNew ? '/systems' : `/systems/${system.id}`} className="btn sm">Cancel</Link>
           <button className="btn primary sm" onClick={save} disabled={status === 'saving'}>{status === 'saving' ? 'Saving…' : isNew ? 'Create system' : 'Save'}</button>
         </div>
@@ -106,9 +110,9 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
       {/* step body */}
       <div className="pb-4">
         {step === 0 && <Step1Primitive system={system} setSystem={setSystem} />}
-        {step === 1 && <Step3Variants system={system} setSystem={setSystem} />}
-        {step === 2 && <Step2Modifiers system={system} setSystem={setSystem} />}
-        {step === 3 && <PropertiesEditor system={system} setSystem={setSystem} />}
+        {step === 1 && <Step3Variants system={system} setSystem={setSystem} warnings={warnings} />}
+        {step === 2 && <Step2Modifiers system={system} setSystem={setSystem} warnings={warnings} />}
+        {step === 3 && <PropertiesEditor system={system} setSystem={setSystem} warnings={warnings} />}
       </div>
 
       {/* nav */}
@@ -118,6 +122,13 @@ export function SystemWizard({ initial, isNew, materials = [] }: { initial: Syst
         {step < STEPS.length - 1
           ? <button className="btn sm" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Next →</button>
           : <button className="btn primary sm" onClick={save} disabled={status === 'saving'}>{isNew ? 'Create system' : 'Save'}</button>}
+      </div>
+
+      {/* author-time consistency checks (warn-never-block) */}
+      <div className="pt-2">
+        <Card title={`Consistency checks${warnings.length ? ` · ${warnings.length}` : ''}`}>
+          <WarningList warnings={warnings} emptyOk />
+        </Card>
       </div>
 
       {/* deriveRuleContext preview — the authoring↔runtime contract the X-picker consumes */}

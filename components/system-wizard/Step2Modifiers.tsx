@@ -1,8 +1,10 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { Modifier, ModifierType, System } from '@/lib/types';
+import type { Modifier, ModifierType, System, Warning } from '@/lib/types';
 import { Card, Field, NumberInput, Select, TextInput, Toggle } from './parts';
+import { byAffected, affected } from '@/lib/validate';
+import { WarningBadge } from '@/components/warnings/warning-list';
 
 const GROUPS = ['geometric', 'mounting', 'stock', 'compliance', 'environmental'] as const;
 const KINDS = ['distance', 'bool', 'percentage', 'enum', 'banded_distance', 'support_grid'] as const;
@@ -16,7 +18,7 @@ function blankType(kind: Kind): ModifierType {
   }
 }
 
-export function Step2Modifiers({ system, setSystem }: { system: System; setSystem: Dispatch<SetStateAction<System>> }) {
+export function Step2Modifiers({ system, setSystem, warnings = [] }: { system: System; setSystem: Dispatch<SetStateAction<System>>; warnings?: Warning[] }) {
   const mods = system.modifiers;
   const update = (i: number, patch: Partial<Modifier>) =>
     setSystem((s) => ({ ...s, modifiers: s.modifiers.map((m, j) => (j === i ? { ...m, ...patch } : m)) }));
@@ -37,7 +39,7 @@ export function Step2Modifiers({ system, setSystem }: { system: System; setSyste
             <div className="uc mb-1.5">{g}</div>
             <div className="flex flex-col gap-2">
               {items.map(({ m, i }) => (
-                <ModifierRow key={i} m={m} onChange={(p) => update(i, p)} onRemove={() => remove(i)} />
+                <ModifierRow key={i} m={m} onChange={(p) => update(i, p)} onRemove={() => remove(i)} warnings={byAffected(warnings, affected.mod(m.name))} />
               ))}
             </div>
           </div>
@@ -48,7 +50,7 @@ export function Step2Modifiers({ system, setSystem }: { system: System; setSyste
   );
 }
 
-function ModifierRow({ m, onChange, onRemove }: { m: Modifier; onChange: (p: Partial<Modifier>) => void; onRemove: () => void }) {
+function ModifierRow({ m, onChange, onRemove, warnings = [] }: { m: Modifier; onChange: (p: Partial<Modifier>) => void; onRemove: () => void; warnings?: Warning[] }) {
   const kind = m.type.kind as Kind;
   return (
     <div className="rounded border border-line p-2.5">
@@ -56,7 +58,10 @@ function ModifierRow({ m, onChange, onRemove }: { m: Modifier; onChange: (p: Par
         <Field label="name"><TextInput mono value={m.name} onChange={(v) => onChange({ name: v })} /></Field>
         <Field label="group"><Select value={m.group} options={GROUPS} onChange={(v) => onChange({ group: v })} /></Field>
         <Field label="type"><Select value={kind} options={KINDS} onChange={(v) => onChange({ type: blankType(v), default_value: v === 'bool' ? false : v === 'distance' || v === 'percentage' ? 0 : undefined })} /></Field>
-        <button type="button" className="btn sm danger" onClick={onRemove}>Remove</button>
+        <div className="flex items-center justify-end gap-2">
+          <WarningBadge warnings={warnings} />
+          <button type="button" className="btn sm danger" onClick={onRemove}>Remove</button>
+        </div>
       </div>
 
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
