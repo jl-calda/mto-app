@@ -56,7 +56,7 @@ export function PlacementRulesEditor({ system, setSystem }: { system: System; se
 
               {(r.max_spacing ?? 0) > 0 && (
                 <div className="mt-2.5 border-t border-line pt-2.5">
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                     <span className="uc">placement preview</span>
                     <label className="flex items-center gap-1.5 text-[10px] text-ink-3">
                       sample {system.primitive.kind === 'height' ? 'height' : 'length'}
