@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { AttrValue, ModifierType, PropertyInstance, System, SystemVariantRef } from '@/lib/types';
+import type { AttrValue, ModifierType, PropertyInstance, System, SystemVariantRef, Warning } from '@/lib/types';
 import { Card, Field, NumberInput, Select, TextInput, Toggle } from './parts';
+import { byAffected, affected } from '@/lib/validate';
+import { WarningBadge } from '@/components/warnings/warning-list';
 
 const COL_KINDS = ['bool', 'enum', 'distance'] as const;
 type ColKind = (typeof COL_KINDS)[number];
@@ -15,7 +17,7 @@ function blankColType(kind: ColKind): ModifierType {
   return kind === 'enum' ? { kind: 'enum', values: ['a', 'b'] } : { kind };
 }
 
-export function Step3Variants({ system, setSystem }: { system: System; setSystem: Dispatch<SetStateAction<System>> }) {
+export function Step3Variants({ system, setSystem, warnings = [] }: { system: System; setSystem: Dispatch<SetStateAction<System>>; warnings?: Warning[] }) {
   const [sel, setSel] = useState(0);
   const cols = system.variants.attribute_columns;
   const rows = system.variants.rows;
@@ -75,6 +77,7 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
                   {r.kind === 'local'
                     ? <input className="input text w-full" value={r.name} onChange={(e) => renameRow(i, e.target.value)} />
                     : <span className="mono text-[12px]">library · {r.variant_id} @v{r.pinned_version}</span>}
+                  <WarningBadge warnings={byAffected(warnings, affected.variant(rowName(r)))} />
                   <button type="button" className="btn sm danger" onClick={() => removeRow(i)}>×</button>
                 </div>
                 {r.kind === 'local' && cols.length > 0 && (
@@ -103,7 +106,10 @@ export function Step3Variants({ system, setSystem }: { system: System; setSystem
               <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end">
                 <Field label="library id"><TextInput mono value={c.library_id} onChange={(v) => updateCrit(i, { library_id: v })} /></Field>
                 <Field label="default"><TextInput value={String(c.default_value ?? '')} onChange={(v) => updateCrit(i, { default_value: v })} /></Field>
-                <button type="button" className="btn sm danger" onClick={() => removeCrit(i)}>×</button>
+                <div className="flex items-center justify-end gap-2">
+                  <WarningBadge warnings={byAffected(warnings, affected.crit(c.library_id))} />
+                  <button type="button" className="btn sm danger" onClick={() => removeCrit(i)}>×</button>
+                </div>
               </div>
             ))}
             {system.criteria.length === 0 && <div className="text-[12px] text-ink-3">No criteria.</div>}

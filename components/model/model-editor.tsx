@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { deriveRuleContext, evaluateRuleAgainstSample } from '@/lib/engine';
+import { deriveRuleContext, evaluateRuleAgainstSample, resolveTakeoff } from '@/lib/engine';
 import { saveModelAction, deleteModelAction } from '@/app/models/actions';
+import { validateModel, byAffected, affected } from '@/lib/validate';
+import { synthSample, ENGINE_NOISE } from '@/lib/validate/sample-takeoff';
+import { WarningBadge, WarningList } from '@/components/warnings/warning-list';
 import { Visual } from '@/components/visual';
 import { VisualEditor } from '@/components/visual-editor';
 import { DeleteButton } from '@/components/delete-button';
@@ -103,6 +106,16 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
     [selected, system, variant, criteria, props, primitive, sampleMaterial],
   );
 
+  // author-time consistency (static) + live engine warnings (the real engine on the
+  // sample inputs — surfaces high_wastage / cut_too_long / auto-split the static
+  // checks can't prove). Both advisory; saving is unchanged.
+  const modelWarnings = useMemo(() => validateModel(system, model), [system, model]);
+  const engineResult = useMemo(() => {
+    try { return resolveTakeoff(synthSample(system, model, { variant, criteria, props, primitive }, materials)); }
+    catch { return null; }
+  }, [system, model, variant, criteria, props, primitive, materials]);
+  const engineWarnings = useMemo(() => (engineResult?.warnings ?? []).filter((w) => !ENGINE_NOISE.test(w.message)), [engineResult]);
+
   // ── rule mutations ──
   const updateRule = (patch: Partial<Rule>) =>
     setModel((m) => ({ ...m, materials: m.materials.map((mm, i) => (i === selIdx ? { ...mm, rule: { ...mm.rule, ...patch } } : mm)) }));
@@ -146,6 +159,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
   }
 
   const r = selected?.rule;
+  const selectedWarnings = selected ? byAffected(modelWarnings, affected.mm(selected.id), selected.material_id) : [];
 
   return (
     <div className="mx-auto max-w-[1400px] px-5 pt-[18px]">
@@ -163,6 +177,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
         <div className="flex flex-wrap items-center gap-2">
           {status === 'error' && <span className="mono text-[10px] text-err">{error ?? 'save failed'}</span>}
           {status === 'saved' && <span className="mono text-[10px] text-ok">● saved</span>}
+          <WarningBadge warnings={modelWarnings} />
           <Select value={model.status} options={['draft', 'published', 'deprecated'] as const} onChange={(v) => setModel((m) => ({ ...m, status: v }))} />
           {!isNew && (
             <DeleteButton
@@ -202,6 +217,7 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                     <div className="mono truncate text-[10px] text-ink-3">{englishify(mm.rule, mat)}</div>
                   </div>
                 </button>
+                <WarningBadge warnings={byAffected(modelWarnings, affected.mm(mm.id), mm.material_id)} />
                 <span className="tag" style={{ color: 'var(--ok)', background: '#E5EFE4' }}>{mm.rule.qty_kind}</span>
                 <button className="btn sm danger" aria-label="Remove material" onClick={() => removeMaterial(mm.id)}>×</button>
               </div>
@@ -281,6 +297,12 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                 </div>
               </div>
 
+              {selectedWarnings.length > 0 && (
+                <div className="overflow-hidden rounded-md border border-line bg-panel p-3.5">
+                  <WarningList warnings={selectedWarnings} title="Consistency" />
+                </div>
+              )}
+
               {/* live evaluation pane — same engine as the take-off */}
               <div className="overflow-hidden rounded-md border border-accent-line bg-panel">
                 <header className="flex items-center justify-between border-b border-line px-3.5 py-2.5" style={{ background: 'var(--selected)' }}>
@@ -318,6 +340,15 @@ export function ModelEditor({ system, model: initialModel, materials, isNew = fa
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* live engine warnings — the real engine on the sample inputs */}
+              <div className="overflow-hidden rounded-md border border-line bg-panel">
+                <header className="flex items-center justify-between border-b border-line bg-panel-2 px-3.5 py-2.5">
+                  <h3 className="m-0 text-[13px] font-semibold">Engine warnings · live</h3>
+                  <span className="mono text-[10px] text-ink-3">resolveTakeoff · sample</span>
+                </header>
+                <div className="p-3.5"><WarningList warnings={engineWarnings} emptyOk /></div>
               </div>
             </>
           )}

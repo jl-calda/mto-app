@@ -1,10 +1,12 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ChainRole, PropertyArchetype, PropertyInput, PropertyInstance, PropertyScope, System, SystemVariantRef } from '@/lib/types';
+import type { ChainRole, PropertyArchetype, PropertyInput, PropertyInstance, PropertyScope, System, SystemVariantRef, Warning } from '@/lib/types';
 import { Card, Field, NumberInput, Select, Stub, TextInput } from './parts';
 import { SpansEditor } from './SpansEditor';
 import { PlacementRulesEditor } from './PlacementRulesEditor';
+import { byAffected, affected } from '@/lib/validate';
+import { WarningBadge } from '@/components/warnings/warning-list';
 
 function rowName(r: SystemVariantRef): string {
   return r.kind === 'local' ? r.name : r.variant_id;
@@ -31,7 +33,7 @@ function scopeKind(s: PropertyScope): string {
   return typeof s === 'string' ? s : s.kind;
 }
 
-export function PropertiesEditor({ system, setSystem }: { system: System; setSystem: Dispatch<SetStateAction<System>> }) {
+export function PropertiesEditor({ system, setSystem, warnings = [] }: { system: System; setSystem: Dispatch<SetStateAction<System>>; warnings?: Warning[] }) {
   const props = system.properties;
   const update = (i: number, patch: Partial<PropertyInstance>) =>
     setSystem((s) => ({ ...s, properties: s.properties.map((p, j) => (j === i ? { ...p, ...patch } : p)) }));
@@ -73,7 +75,10 @@ export function PropertiesEditor({ system, setSystem }: { system: System; setSys
                 <Field label="scope">
                   <Select value={scopeKind(p.scope)} options={SCOPES} onChange={(v) => update(i, { scope: v === 'per_span' ? { kind: 'per_span', span_name: 'span_1' } : (v as PropertyScope) })} />
                 </Field>
-                <button type="button" className="btn sm danger" onClick={() => remove(i)}>Remove</button>
+                <div className="flex items-center justify-end gap-2">
+                  <WarningBadge warnings={byAffected(warnings, affected.prop(p.name))} />
+                  <button type="button" className="btn sm danger" onClick={() => remove(i)}>Remove</button>
+                </div>
               </div>
 
               {/* archetype-specific inputs */}

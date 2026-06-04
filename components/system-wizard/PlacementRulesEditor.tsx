@@ -1,14 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { PlacementRules, PropertyInstance, System } from '@/lib/types';
 import { Card, Field, NumberInput } from './parts';
+import { PlacementDiagram } from '@/components/placement-diagram';
 
 // Placement rules drive the place_supports algorithm (end clearances, spacing
 // bounds, forbidden zones). Authored per property; the engine passes the first
 // property's rules to place_supports.
 
 export function PlacementRulesEditor({ system, setSystem }: { system: System; setSystem: Dispatch<SetStateAction<System>> }) {
+  // illustrative sample run length per property (default by primitive kind).
+  const defaultLen = system.primitive.kind === 'height' ? 9450 : 24000;
+  const [sampleLen, setSampleLen] = useState<Record<string, number>>({});
+  const lenFor = (name: string) => sampleLen[name] ?? defaultLen;
+
   const setRules = (pi: number, patch: Partial<PlacementRules>) =>
     setSystem((s) => ({ ...s, properties: s.properties.map((p, j) => (j === pi ? { ...p, placement_rules: { ...(p.placement_rules ?? {}), ...patch } } : p)) }));
   const clearance = (pi: number, end: 'end_clearance_foot' | 'end_clearance_head', max: number) =>
@@ -46,6 +53,20 @@ export function PlacementRulesEditor({ system, setSystem }: { system: System; se
                   </div>
                 ))}
               </div>
+
+              {(r.max_spacing ?? 0) > 0 && (
+                <div className="mt-2.5 border-t border-line pt-2.5">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="uc">placement preview</span>
+                    <label className="flex items-center gap-1.5 text-[10px] text-ink-3">
+                      sample {system.primitive.kind === 'height' ? 'height' : 'length'}
+                      <input className="input" style={{ width: 96, height: 24 }} inputMode="numeric" value={lenFor(p.name)} onChange={(e) => setSampleLen((s) => ({ ...s, [p.name]: Number(e.target.value) || 0 }))} />
+                    </label>
+                  </div>
+                  <PlacementDiagram rules={r} length={lenFor(p.name)} label={p.name} />
+                  {r.per_segment && <div className="mt-1 text-[10px] text-ink-3">per_segment is on — at take-off each flight/leg places its own supports (one at every corner). This preview shows a single span.</div>}
+                </div>
+              )}
             </div>
           );
         })}
